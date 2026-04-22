@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Les Termes</title>
+    <link rel="icon" type="image/x-icon" href="cartes/dos-carte.ico">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="card-skin-picker" aria-label="Choisir le skin des cartes">
+        <button id="card-skin-toggle" type="button" title="Changer le skin des cartes" aria-haspopup="true" aria-expanded="false">
+            <img id="card-skin-toggle-image" class="card-skin-image" src="cartes/dos-carte.png" alt="Skin de carte">
+        </button>
+        <div id="card-skin-menu" class="hidden" role="menu" aria-label="Skins de cartes disponibles"></div>
+    </div>
+
+    <div id="lobby-screen">
+        <div class="lobby-ambient">
+            <span class="ambient-glow glow-a"></span>
+            <span class="ambient-glow glow-b"></span>
+            <img src="cartes/dos-carte.png" class="ambient-card ambient-card-a" alt="Carte décorative">
+            <img src="cartes/dos-carte.png" class="ambient-card ambient-card-b" alt="Carte décorative">
+            <img src="cartes/dos-carte.png" class="ambient-card ambient-card-c" alt="Carte décorative">
+        </div>
+
+        <div id="step-home" class="lobby-step">
+            <div class="hero-container">
+                <div class="hero-floating-cards">
+                    <img src="cartes/dos-carte.png" class="floating-card card-1" alt="Carte">
+                    <img src="cartes/dos-carte.png" class="floating-card card-2" alt="Carte">
+                    <img src="cartes/dos-carte.png" class="floating-card card-3" alt="Carte">
+                </div>
+                
+                <h1 class="hero-title">Les Termes</h1>
+                
+                <div class="hero-desc-box">
+                    <p>Sacrifiez vos relations sur l'autel de l'honnêteté.</p>
+                    <p class="hero-subdesc">Une carte révèle un acte impardonnable. Autour de la table, des visages que vous pensiez connaître. Oubliez la pitié, il faut dire <b style="color: aliceblue;">les termes </b> et désigner le coupable idéal. Celui qui cumule le plus de condamnations sera couronné, à juste titre, le pire d'entre vous.</p>
+                </div>
+
+                <button class="btn-primary btn-hero" onclick="goToIdentity()">Commencer à jouer 🔥</button>
+            </div>
+        </div>
+
+        <div id="step-identity" class="lobby-step hidden">
+            <div class="lobby-card card">
+                <h1>Les Termes</h1>
+                <p class="subtitle" id="identity-subtitle">C'est qui ce beau gosse ?</p>
+
+                <div class="form-group">
+                    <label>Ton Pseudo</label>
+                    <input type="text" id="input-pseudo" placeholder="Ex: Philippe" maxlength="12">
+                </div>
+
+                <div class="avatar-picker-label">Ton Avatar</div>
+                <div class="avatar-picker-shell">
+                    <div class="avatar-picker" id="avatar-picker"></div>
+                    <button class="avatar-nav-btn" id="avatar-next-btn" type="button" aria-label="Page avatars suivante">➜</button>
+                </div>
+
+                <button class="btn-primary" onclick="goToStep2()">C'est parti →</button>
+                <button class="btn-back" onclick="goToHome()">← Retour à l'accueil</button>
+            </div>
+        </div>
+
+        <div id="step-choose" class="lobby-step hidden">
+            <div class="lobby-wide-card">
+
+                <div class="lobby-panel card">
+                    <div class="panel-icon">🚪</div>
+                    <h2>Rejoindre</h2>
+                    <p class="panel-desc">Rejoins la table de tes potes.</p>
+                    <div class="form-group" style="margin-top: auto;">
+                        <label>Code de la Room</label>
+                        <input type="text" id="input-room-code" placeholder="0000" maxlength="4" class="code-input">
+                    </div>
+                    <button class="btn-primary" onclick="joinRoom()" style="margin-top: 20px;">Rejoindre →</button>
+                    <button class="btn-back" onclick="goToStep1()">← Modifier mon profil</button>
+                </div>
+
+                <div class="lobby-divider"></div>
+
+                <div class="lobby-panel card">
+                    <div class="panel-icon">👑</div>
+                    <h2>Créer une Room</h2>
+                    <p class="panel-desc">T'es le chef, configure ta room !</p>
+
+                    <div class="create-options-grid">
+                        <div class="form-group">
+                            <label>Nom de la Room</label>
+                            <input type="text" id="input-room-name" placeholder="Soirée Raclette" maxlength="16">
+                        </div>
+                        <div class="form-group">
+                            <label>Points pour gagner</label>
+                            <div class="points-stepper">
+                                <button class="stepper-btn" type="button" onclick="stepPoints(-1)">−</button>
+                                <input type="number" id="input-points" value="5" min="2" max="15">
+                                <button class="stepper-btn" type="button" onclick="stepPoints(1)">+</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Mode de Vote</label>
+                            <select id="select-vote-mode">
+                                <option value="transparent">👁️ Transparent</option>
+                                <option value="semi">🕵️ Semi-Anonyme</option>
+                                <option value="anonyme">🙈 Anonyme</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary btn-create" onclick="createRoom()">Créer la Room 🔥</button>
+                    <button class="btn-back" onclick="goToStep1()">← Modifier mon profil</button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <div id="game-wrapper" class="hidden">
+        <div class="room-badge" id="room-badge">Room: ?</div>
+        <div id="cinematic-backdrop"></div>
+
+        <div id="game-layout">
+            <div id="left-pane">
+                <div id="table">
+                    <div id="deck" onclick="startCardDraw()" title="Piocher une carte"><img src="cartes/dos-carte.png" alt="Deck"></div>
+                    <div id="animation-layer"></div>
+                </div>
+            </div>
+
+            <div id="right-pane">
+                <button id="cemetery-btn" onclick="toggleCemetery()" title="Cimetière des cartes brûlées">🪦 <span id="cemetery-count">0</span></button>
+
+                <p id="waiting-text" class="placeholder-text">C'est à <strong id="reader-name">...</strong> de piocher !</p>
+
+                <div id="current-card" class="card hidden">
+                    <p id="card-category" class="card-category"># CATEGORIE</p>
+                    <p id="card-text" class="card-text">...</p>
+                    
+                    <button id="btn-start-vote" class="hidden btn-primary" onclick="startVoteTimer()">Lancer le vote</button>
+                    <p id="not-reader-text" class="hidden placeholder-text">Le lecteur lit la carte et va lancer le vote...</p>
+                    <button id="btn-validate" class="hidden btn-success" onclick="validateMyVote()">Valider mon choix</button>
+                    <div id="timer-display" class="hidden">30</div>
+                    <div id="recap-display" class="hidden recap-text"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="card-selection-overlay" class="hidden">
+        <div id="selection-title" class="tie-subtitle"></div>
+        <div id="selection-container"></div>
+    </div>
+
+    <div id="tie-overlay" class="hidden">
+        <h2 class="tie-title">⚖️ ÉGALITÉ ⚖️</h2>
+        <p class="tie-subtitle">Personne n'est d'accord... La carte est détruite !</p>
+        <div id="tie-card" class="card"><p id="tie-category" class="card-category"></p><p id="tie-text" class="card-text"></p></div>
+    </div>
+
+    <div id="victory-overlay" class="hidden">
+        <div id="victory-shell">
+            <h2 id="victory-title">👑 AMI DE MERDE 👑</h2>
+            <p id="victory-message"></p>
+
+            <div id="rivalry-summary"></div>
+            <div id="endgame-cards-summary"></div>
+
+            <button class="btn-primary" onclick="location.reload()" style="margin-top: 24px; width: auto; padding: 15px 40px;">Rejouer</button>
+        </div>
+    </div>
+
+    <div id="cemetery-overlay" class="hidden">
+        <div id="cemetery-panel">
+            <div id="cemetery-header">
+                <span>🪦 Cimetière des cartes brûlées</span>
+                <button onclick="toggleCemetery()">✕</button>
+            </div>
+            <div id="cemetery-cards"></div>
+        </div>
+    </div>
+
+    <div id="player-cards-overlay" class="hidden" onclick="this.classList.add('hidden')">
+        <div id="player-cards-panel" onclick="event.stopPropagation()">
+            <div id="cemetery-header">
+                <span id="player-cards-title"></span>
+                <button onclick="document.getElementById('player-cards-overlay').classList.add('hidden')">✕</button>
+            </div>
+            <div id="player-cards-list"></div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="cartes.js"></script>
+    <script src="audio.js"></script> 
+    <script src="script.js"></script>
+</body>
+</html>
