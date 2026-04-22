@@ -2,46 +2,54 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const path = require('path'); // 1. Add this line
+const path = require('path');
 
-// 1. Configuration de base
 const app = express();
-
-app.use(cors()); // Autorise notre frontend à parler au backend
+app.use(cors());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
+// On stocke les rooms ici : { "1234": { players: [...] } }
+const rooms = {};
 
-// 2. Configuration de Socket.io (Le facteur en temps réel)
-const io = new Server(server, {
-    cors: {
-        origin: "*", // Pour l'instant on accepte les connexions de partout
-        methods: ["GET", "POST"]
-    }
-});
-
-// 3. Quand un joueur se connecte au site
 io.on('connection', (socket) => {
-    console.log(`🟢 Un nouveau joueur est connecté (ID: ${socket.id})`);
+    console.log(`🟢 Connecté : ${socket.id}`);
 
-    // Quand un joueur veut rejoindre une Room
-    socket.on('join_room', (roomCode) => {
-        socket.join(roomCode);
-        console.log(`🚪 Le joueur ${socket.id} a rejoint la room: ${roomCode}`);
+    // Créer une room
+    socket.on('create_room', (playerData) => {
+        const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+        rooms[roomCode] = { players: [{ ...playerData, id: socket.id, score: 0, wonCards: [] }] };
         
-        // On prévient tous les joueurs de cette room que quelqu'un est arrivé
-        io.to(roomCode).emit('player_joined', `Un nouveau joueur est arrivé !`);
+        socket.join(roomCode);
+        socket.emit('room_info', { roomCode, players: rooms[roomCode].players });
+        console.log(`👑 Room ${roomCode} créée par ${playerData.name}`);
     });
 
-    // Quand un joueur ferme l'onglet
+    // Rejoindre une room
+    socket.on('join_room', (data) => {
+        const room = rooms[data.roomCode];
+        if (room) {
+            const newPlayer = { ...data.playerData, id: socket.id, score: 0, wonCards: [] };
+            room.players.push(newPlayer);
+            
+            socket.join(data.roomCode);
+            // On prévient TOUT LE MONDE dans la room qu'il y a une mise à jour
+            io.to(data.roomCode).emit('update_players', room.players);
+            socket.emit('room_info', { roomCode: data.roomCode, players: room.players });
+        } else {
+            socket.emit('error_msg', "Room introuvable !");
+        }
+    });
+
     socket.on('disconnect', () => {
-        console.log(`🔴 Le joueur nous a quitté (ID: ${socket.id})`);
+        console.log(`🔴 Déconnecté : ${socket.id}`);
+        // Ici on pourrait gérer la déconnexion d'un joueur en pleine partie
     });
 });
 
-// 4. On allume le serveur sur le port 3000
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🚀 Serveur en ligne et prêt à arbitrer sur http://localhost:${PORT}`);
+    console.log(`🚀 Serveur prêt sur le port ${PORT}`);
 });
