@@ -48,48 +48,50 @@ function stepPoints(delta) {
     input.value = next;
 }
 
-// Gère la logique de la création de room
+// 1. Connexion au serveur (se connecte automatiquement à l'URL actuelle)
+const socket = io();
+
+// 2. On remplace tes anciennes fonctions de clic
 function createRoom() {
-    const roomNameInput = document.getElementById('input-room-name');
-    const pointsInput = document.getElementById('input-points');
+    const pseudo = document.getElementById('input-pseudo').value;
+    if (!pseudo.trim()) return showNotification("Pseudo obligatoire !");
 
-    if (!roomNameInput.value.trim()) {
-        showNotification("⚠️ Tu dois donner un nom à ta room !");
-        roomNameInput.focus();
-        return;
-    }
-
-    const points = parseInt(pointsInput.value);
-    if (!points || points < 2 || points > 15) {
-        showNotification("⚠️ Le score pour gagner doit être compris entre 2 et 15.");
-        pointsInput.focus();
-        return;
-    }
-
-    // Si tout est bon, on lance le jeu
-    startGame();
+    // On envoie la demande au serveur
+    socket.emit('create_room', { name: pseudo, avatar: selectedAvatar });
 }
 
-// Gère la logique pour rejoindre une room
 function joinRoom() {
-    const roomCodeInput = document.getElementById('input-room-code');
-    const code = roomCodeInput.value.trim();
-    
-    if (!code) {
-        showNotification("⚠️ Tu dois entrer un code pour rejoindre tes potes.");
-        roomCodeInput.focus();
-        return;
-    }
-    
-    if (code.length !== 4) {
-        showNotification("⚠️ Le code de la room doit faire 4 caractères.");
-        roomCodeInput.focus();
-        return;
-    }
+    const pseudo = document.getElementById('input-pseudo').value;
+    const code = document.getElementById('input-room-code').value;
+    if (!pseudo.trim() || code.length !== 4) return showNotification("Infos invalides !");
 
-    // Si tout est bon, on lance le jeu
-    startGame();
+    socket.emit('join_room', { 
+        roomCode: code, 
+        playerData: { name: pseudo, avatar: selectedAvatar } 
+    });
 }
+
+// 3. On écoute les réponses du serveur
+socket.on('room_info', (data) => {
+    currentRoomCode = data.roomCode;
+    players = data.players; // On remplace la liste de bots par les vrais joueurs
+    
+    // On cache le lobby et on affiche le jeu
+    document.getElementById('lobby-screen').classList.add('hidden');
+    document.getElementById('game-wrapper').classList.remove('hidden');
+    document.getElementById('room-badge').innerText = `Room: ${currentRoomCode}`;
+    
+    renderPlayers();
+});
+
+socket.on('update_players', (serverPlayers) => {
+    players = serverPlayers;
+    renderPlayers(); // On redessine les avatars dès qu'un pote arrive
+    showNotification("Un nouveau traître a rejoint !");
+});
+
+socket.on('error_msg', (msg) => showNotification(msg));
+
 const PSEUDO_PLACEHOLDERS =[
     "Ex: Joe Dash",
     "Ex: Le T",
