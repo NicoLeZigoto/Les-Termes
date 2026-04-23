@@ -399,14 +399,13 @@ function startVoteTimer() {
     socket.emit('start_vote', currentRoomCode);
 }
 
-// Le serveur démarre le vote pour tout le monde
+// Le serveur démarre le vote pour tout le monde// Le serveur démarre le vote pour tout le monde
 socket.on('vote_phase_start', (data) => {
     const { duration, isTieBreak, tieBreakCandidates, tieBreakExcluded } = data;
 
     isVoting = true;
     localTimer = duration;
     document.getElementById('btn-start-vote').classList.add('hidden');
-    document.getElementById('not-reader-text').classList.add('hidden');
     document.getElementById('btn-validate').classList.add('hidden');
 
     const display = document.getElementById('timer-display');
@@ -414,23 +413,45 @@ socket.on('vote_phase_start', (data) => {
     display.innerText = localTimer;
     display.style.color = '#e74c3c';
 
+    // Stocker les règles de vote
+    window._tieBreakCandidates = isTieBreak ? tieBreakCandidates : null;
+    window._tieBreakExcluded = isTieBreak ? tieBreakExcluded :[];
+
     // Mise en évidence des candidats tie-break
     document.querySelectorAll('.avatar').forEach(el => el.classList.remove('tie-candidate'));
+    
+    const notReaderText = document.getElementById('not-reader-text');
+    notReaderText.classList.remove('hidden');
+
     if (isTieBreak && tieBreakCandidates) {
         tieBreakCandidates.forEach(id => {
             document.getElementById(`avatar-${id}`)?.classList.add('tie-candidate');
         });
-    }
 
-    // Stocker les règles de vote
-    window._tieBreakCandidates = isTieBreak ? tieBreakCandidates : null;
-    window._tieBreakExcluded = isTieBreak ? tieBreakExcluded : [];
-
-    // Afficher le bouton Valider si je peux voter
-    const myPlayer = players.find(p => p.id === MY_ID);
-    const amExcluded = window._tieBreakExcluded && window._tieBreakExcluded.includes(MY_ID);
-    if (myPlayer && !myPlayer.isDead && !amExcluded) {
-        // Le bouton apparaît après un clic sur un avatar
+        // Gestion du message textuel selon le rôle du joueur
+        const amExcluded = window._tieBreakExcluded.includes(MY_ID);
+        if (amExcluded) {
+            notReaderText.innerHTML = "⚖️ Tu es en train de te faire juger ! Attends le verdict...";
+        } else {
+            const candidateNames = tieBreakCandidates.map(id => {
+                const p = players.find(player => player.id === id);
+                return p ? `<strong style="color:#e67e22">${p.name}</strong>` : '???';
+            });
+            let namesStr = "";
+            if (candidateNames.length === 2) {
+                namesStr = candidateNames.join(' et ');
+            } else if (candidateNames.length > 2) {
+                namesStr = candidateNames.slice(0, -1).join(', ') + ' et ' + candidateNames[candidateNames.length - 1];
+            }
+            notReaderText.innerHTML = `⚖️ Tu dois départager ${namesStr} !`;
+        }
+    } else {
+        const myPlayer = players.find(p => p.id === MY_ID);
+        if (myPlayer && myPlayer.isDead) {
+            notReaderText.innerHTML = "👻 Tu es mort... regarde les vivants s'entretuer.";
+        } else {
+            notReaderText.innerHTML = "À toi de voter !";
+        }
     }
 
     audioManager.playSound('vote-start');
@@ -510,7 +531,6 @@ function validateMyVote() {
     window._myVoteValidated = true;
     audioManager.playSound('vote-validate', { volume: 0.7 });
     document.getElementById('btn-validate').classList.add('hidden');
-    document.getElementById(`avatar-${MY_ID}`)?.classList.add('validated');
     document.body.classList.remove('urgent-flash');
 
     socket.emit('cast_vote', { roomCode: currentRoomCode, targetId });
@@ -519,6 +539,14 @@ function validateMyVote() {
 // Confirmation du serveur que mon vote est bien enregistré
 socket.on('vote_registered', (data) => {
     // Déjà géré localement, rien de plus
+});
+
+// Le serveur prévient que quelqu'un a validé son vote (Cercle vert)
+socket.on('player_validated', (data) => {
+    const avatarEl = document.getElementById(`avatar-${data.voterId}`);
+    if (avatarEl) {
+        avatarEl.classList.add('validated');
+    }
 });
 
 // =========================================================
@@ -755,7 +783,6 @@ window.addEventListener('resize', () => {
         restorePointers();
     }
 });
-
 function renderPlayers(radiusScale = 1, centerTargetId = null) {
     const table = document.getElementById('table');
     const w = table.clientWidth || 480;
@@ -796,9 +823,14 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
         playerDiv.style.left = `${x}px`;
         playerDiv.style.top = `${y}px`;
 
-        // Mise à jour avatar (peut changer après mutilation)
+        // Mise à jour avatar (peut changer après mutilation) et maintien du cercle orange
         const avatarEl = document.getElementById(`avatar-${p.id}`);
-        if (avatarEl) avatarEl.innerText = p.avatar;
+        if (avatarEl) {
+            avatarEl.innerText = p.avatar;
+            if (window._tieBreakCandidates && window._tieBreakCandidates.includes(p.id)) {
+                avatarEl.classList.add('tie-candidate');
+            }
+        }
 
         // Icône lecteur
         let iconEl = playerDiv.querySelector('.reader-icon');
@@ -1293,7 +1325,7 @@ function initLobbyUI() {
         
         document.getElementById('step-home').classList.add('hidden');
         document.getElementById('step-identity').classList.remove('hidden');
-        document.getElementById('identity-subtitle').innerText = "Tu as été invité ! C'est quoi ton p'tit nom ?";
+        document.getElementById('identity-subtitle').innerText = "C'est quoi ton p'tit nom ?";
     }
 
     const pseudoInput = document.getElementById('input-pseudo');
