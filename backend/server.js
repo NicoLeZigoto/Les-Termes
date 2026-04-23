@@ -465,26 +465,35 @@ socket.on('join_room', (data) => {
         const room = rooms[roomCode];
         if (!room) return;
         
-        room.phase = 'drawing';
-        room.deck = deck ? [...deck] : [];
-        room.cemetery =[];
-        room.currentCard = null;
-        room.votes = {};
-        room.isVoting = false;
-        room.tieBreakCandidates =[];
-        room.tieBreakExcluded =[];
-        clearTimer(room);
+        const player = room.players.find(p => p.id === socket.id);
+        if (!player) return;
 
-        room.players.forEach(p => {
-            p.score = 0;
-            p.afkCount = 0;
-            p.isDead = false;
-            p.isSpectator = false; // Les spectateurs deviennent des joueurs officiels !
-            p.wonCards =[];
-        });
+        // Si la room n'a pas encore été réinitialisée, on le fait et on met tout le monde spectateur
+        if (room.phase !== 'lobby') {
+            room.phase = 'lobby';
+            room.deck = deck ? [...deck] : [];
+            room.cemetery = [];
+            room.currentCard = null;
+            room.votes = {};
+            room.isVoting = false;
+            room.tieBreakCandidates = [];
+            room.tieBreakExcluded = [];
+            clearTimer(room);
 
-        io.to(roomCode).emit('game_restarted', { players: room.players, currentReaderId: room.currentReaderId });
-        console.log(`🔄 Partie relancée dans la room ${roomCode}`);
+            room.players.forEach(p => {
+                p.score = 0;
+                p.afkCount = 0;
+                p.isDead = false;
+                p.isSpectator = true; // Par défaut, replacer le joueur en spectateur
+                p.wonCards = [];
+            });
+        }
+
+        // Le joueur qui a cliqué sur "Rejouer" redevient un joueur actif
+        player.isSpectator = false;
+
+        io.to(roomCode).emit('game_reset_state', { players: room.players, currentReaderId: room.currentReaderId });
+        console.log(`🔄 ${player.name} est prêt à rejouer dans la room ${roomCode}`);
     });
 
     // ------ PIOCHE ------
