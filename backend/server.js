@@ -94,9 +94,18 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     let afkDelay = 0;
     if (afkPlayers.length > 0) {
         afkDelay = afkPlayers.length * 5000; // 5 secondes par joueur AFK
-        afkPlayers.forEach(p => { p.afkCount = (p.afkCount || 0) + 1; });
+        afkPlayers.forEach(p => { 
+            p.afkCount = (p.afkCount || 0) + 1; 
+            
+            // 💀 L'ARBITRE TUE OFFICIELLEMENT LE JOUEUR
+            if (p.afkCount >= 3) {
+                p.isDead = true;
+            }
+        });
+        
         io.to(roomCode).emit('afk_players', {
-            afkPlayers: afkPlayers.map(p => ({ id: p.id, afkCount: p.afkCount }))
+            // On envoie aussi la confirmation de décès au client
+            afkPlayers: afkPlayers.map(p => ({ id: p.id, afkCount: p.afkCount, isDead: p.isDead })) 
         });
     }
 
@@ -174,14 +183,21 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
         setTimeout(() => burnCard(roomCode), afkDelay); // <-- On ajoute afkDelay
 
     } else {
-        io.to(roomCode).emit('tie_break_start', { tiedPlayerIds: aliveLosers, votes: votesByTarget });
-        room.tieBreakCandidates = aliveLosers;
-        const isTwoWayTie = aliveLosers.length === 2;
-        room.tieBreakExcluded = isTwoWayTie ? aliveLosers :[];
+        room.tieCount = (room.tieCount || 0) + 1; 
 
-        setTimeout(() => {
-            startVotePhase(roomCode, true, aliveLosers);
-        }, 5000 + afkDelay); // <-- On ajoute afkDelay
+        if (room.tieCount > 1) {
+            io.to(roomCode).emit('general_tie');
+            setTimeout(() => burnCard(roomCode), afkDelay);
+        } else {
+            io.to(roomCode).emit('tie_break_start', { tiedPlayerIds: aliveLosers, votes: votesByTarget });
+            room.tieBreakCandidates = aliveLosers;
+            const isTwoWayTie = aliveLosers.length === 2;
+            room.tieBreakExcluded = isTwoWayTie ? aliveLosers : [];
+
+            setTimeout(() => {
+                startVotePhase(roomCode, true, aliveLosers);
+            }, 5000 + afkDelay);
+        }
     }
 }
 
@@ -198,6 +214,7 @@ function scheduleNextRound(roomCode, delay) {
     if (!room) return;
     room.phase = 'drawing';
     clearTimer(room);
+    
     room.timerRef = setTimeout(() => {
         if (!rooms[roomCode]) return;
         if (room.deck.length === 0) {
@@ -206,6 +223,8 @@ function scheduleNextRound(roomCode, delay) {
         }
         room.votes = {};
         room.currentCard = null;
+        room.tieCount = 0; 
+        
         io.to(roomCode).emit('next_round', {
             currentReaderId: room.currentReaderId,
             players: room.players
@@ -366,6 +385,7 @@ io.on('connection', (socket) => {
         // Piocher 3 cartes
         const threeCards = pickRandomCards(room.deck, 3);
         room.phase = 'reading';
+        room.pendingCards = threeCards; 
 
         // Le lecteur reçoit les 3 vraies cartes, les autres voient le dos
         socket.emit('draw_result_reader', { cards: threeCards });
@@ -457,9 +477,30 @@ io.on('connection', (socket) => {
 
             // Si c'était le lecteur, passer le flambeau
             if (room.currentReaderId === socket.id) {
-                const nextReader = room.players.find(p => !p.isDead && !p.disconnected && p.id !== socket.id);
+                const currentIndex = room.players.findIndex(p => p.id === socket.id);
+                let nextReader = null;
+            
+                for (let i = 1; i < room.players.length; i++) {
+                    const checkIndex = (currentIndex + i) % room.players.length;
+                    const p = room.players[checkIndex];
+                    if (!p.isDead && !p.disconnected) {
+                        nextReader = p;
+                        break;
+                    }
+                }
+            
                 if (nextReader) {
                     room.currentReaderId = nextReader.id;
+                
+                    if (room.phase === 'reading' || room.phase === 'drawing') {
+                        room.phase = 'drawing'; 
+
+                        if (room.pendingCards) {
+                            room.deck.push(...room.pendingCards);
+                            room.pendingCards = null;
+                        }
+                    }
+                
                     io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
                 }
             }
