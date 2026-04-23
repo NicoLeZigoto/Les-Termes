@@ -46,6 +46,33 @@ function stepPoints(delta) {
     input.value = Math.min(15, Math.max(2, current + delta));
 }
 
+function backToMenu() {
+    if (!confirm("Es-tu sûr de vouloir quitter la partie ?")) return;
+
+    audioManager.playSound('ui-click');
+
+    // 1. On prévient le serveur qu'on part
+    socket.emit('leave_room', currentRoomCode);
+
+    // 2. On nettoie l'URL (on revient à la racine)
+    window.history.pushState({}, '', '/');
+
+    // 3. On réinitialise l'interface
+    document.getElementById('game-wrapper').classList.add('hidden');
+    document.getElementById('lobby-screen').classList.remove('hidden');
+    
+    // On renvoie à l'écran de choix (Créer/Rejoindre)
+    document.getElementById('step-home').classList.add('hidden');
+    document.getElementById('step-identity').classList.add('hidden');
+    document.getElementById('step-choose').classList.remove('hidden');
+
+    // 4. On vide les variables locales pour éviter les conflits au prochain join
+    currentRoomCode = "0000";
+    players = [];
+    currentCard = null;
+    isVoting = false;
+}
+
 // =========================================================
 // CONSTANTES ET ÉTAT LOCAL
 // =========================================================
@@ -54,13 +81,14 @@ const PSEUDO_PLACEHOLDERS = [
     "Ex: Joe Dash", "Ex: Le T", "Ex: Brakav", "Ex: Polux", "Ex: Belbit",
     "Ex: Guendoul", "Ex: Ricky La Pénave", "Ex: Jonny L'horloger",
     "Ex: Tromax", "Ex: Ératosthène", "Ex: Marluxia", "Ex: DROP TABLE users; --force",
-    "Ex: PILOTE", "Ex: Alphonse D'audrey de la cour des Fleurs"
+    "Ex: PILOTE", "Ex: Alphonse D'audrey de la cour des Fleurs", "Hey",
+    "Croquette", "Chouquette", "Monsieur Poitoux", "Bétadine"
 ];
 
 const ROOM_NAME_PLACEHOLDERS = [
     "Soirée Raclette", "Le Tribunal", "Règlement de comptes", "Fin des amitiés",
     "Entre Traîtres", "Le Dîner de Cons", "Guerre Froide", "Bain de sang",
-    "Réunion de crise", "Le Conseil", "Copains mais pas gays"
+    "Réunion de crise", "Le Conseil", "Copains mais pas gays", "Sucé-En-Bris"
 ];
 
 const IDENTITY_SUBTITLES = [
