@@ -351,8 +351,11 @@ io.on('connection', (socket) => {
     socket.on('start_game', (roomCode) => {
         const room = rooms[roomCode];
         if (!room || room.currentReaderId !== socket.id) return;
+
+        if (room.phase !== 'lobby') {
+            return; 
+        }
         
-        // CORRECTION BUG 1 : Interdit de lancer la partie s'il y a moins de 3 joueurs
         if (room.players.length < 3) {
             return socket.emit('error_msg', "Il faut au moins 3 joueurs pour démarrer !");
         }
@@ -432,10 +435,14 @@ io.on('connection', (socket) => {
 
         const voter = room.players.find(p => p.id === socket.id);
         if (!voter || voter.isDead) return;
-        if (socket.id === targetId) return; // Pas de vote pour soi
-        if (room.votes[socket.id]) return; // Déjà voté
+        if (socket.id === targetId) return;
+        if (room.votes[socket.id]) return; 
 
-        // Vérifications tie-break
+        const targetPlayer = room.players.find(p => p.id === targetId);
+        if (!targetPlayer || targetPlayer.isDead || targetPlayer.disconnected) {
+            return; 
+        }
+
         if (room.tieBreakCandidates && room.tieBreakCandidates.length > 0) {
             if (room.tieBreakExcluded && room.tieBreakExcluded.includes(socket.id)) return;
             if (!room.tieBreakCandidates.includes(targetId)) return;
@@ -443,15 +450,12 @@ io.on('connection', (socket) => {
 
         room.votes[socket.id] = targetId;
 
-        // Mode transparent : diffuser le pointeur en direct
         if (room.voteMode === 'transparent') {
             io.to(roomCode).emit('pointer_update', { voterId: socket.id, targetId });
         }
 
-        // Confirmer au votant
         socket.emit('vote_registered', { targetId });
 
-        // Vérifier fast-forward (géré dans le tick côté serveur)
         console.log(`🗳️  Vote de ${socket.id} → ${targetId} dans ${roomCode}`);
     });
 
