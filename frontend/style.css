@@ -203,14 +203,15 @@
    }
    
    #card-skin-toggle {
-    width: 80px;
-    height: 160px;
+    width: 76px;
+    height: 98px;
     border: 2px solid #2e4060;
     border-radius: 10px;
     background: #1a2a3a;
     cursor: pointer;
     padding: 0;
     box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+    /* NOUVEAU : On s'assure que le bouton reste au-dessus du fond sombre */
     position: relative; 
     z-index: 5001;      
 }
@@ -223,6 +224,7 @@
 }
 
 #card-skin-menu {
+    /* NOUVEAU : Le menu devient une vraie fenêtre centrée */
     position: fixed;
     top: 50%;
     left: 50%;
@@ -804,63 +806,3 @@
           outline-offset: 3px;
           animation: tiePulse 1.2s ease-in-out infinite;
       }
-
-
-      /* =========================================================
-   EN-TÊTE DU JEU (Badge + Bouton Retour)
-========================================================= */
-
-.game-header {
-    display: flex;
-    justify-content: space-between; /* Pousse les éléments aux deux extrémités */
-    align-items: center;
-    width: 100%;
-    margin-bottom: 20px;
-    padding: 0 10px;
-}
-
-/* =========================================================
-   BOUTON RETOUR AU MENU
-========================================================= */
-
-#btn-back-menu {
-    background-color: rgba(255, 255, 255, 0.1); /* Fond légèrement transparent */
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-size: 0.9rem;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    display: flex;
-    align-items: center;
-    gap: 8px; /* Espace entre l'émoji et le texte */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Effet quand la souris passe dessus */
-#btn-back-menu:hover {
-    background-color: rgba(231, 76, 60, 0.9); /* Rouge "danger" doux */
-    border-color: #e74c3c;
-    transform: translateY(-2px); /* Petit soulèvement */
-    box-shadow: 0 6px 12px rgba(231, 76, 60, 0.3); /* Lueur rouge */
-}
-
-/* Effet quand on clique dessus */
-#btn-back-menu:active {
-    transform: translateY(1px) scale(0.95);
-}
-
-/* Optionnel : cacher le texte sur mobile pour gagner de la place */
-@media (max-width: 480px) {
-    #btn-back-menu {
-        font-size: 0; /* Cache le texte */
-        padding: 8px;
-    }
-    
-    #btn-back-menu::before {
-        content: "🏠"; /* Garde uniquement l'émoji */
-        font-size: 1.2rem;
-    }
-}
