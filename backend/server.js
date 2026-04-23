@@ -365,33 +365,43 @@ io.on('connection', (socket) => {
 
     socket.on('create_room', (data) => {
         const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-        const { playerData, scoreToWin, voteMode, deck } = data;
+        const { playerData, scoreToWin, voteMode, deck, roomName } = data;
 
-        // 🛡️ L'Arbitre impose ses propres limites de sécurité
         const safeName = (playerData.name || "Anonyme").trim().substring(0, 15) || "Anonyme";
-        const safeScore = Math.min(15, Math.max(2, scoreToWin || 5)); // Bloqué entre 2 et 15
+        const safeRoomName = (roomName || "La Room").trim().substring(0, 20) || "La Room";
+        const safeScore = Math.min(15, Math.max(2, scoreToWin || 5));
         
-        // Vérifie qu'il y a bien des cartes
         if (!deck || !Array.isArray(deck) || deck.length === 0) {
             return socket.emit('error_msg', "Impossible de créer la room : paquet de cartes invalide.");
         }
 
         rooms[roomCode] = {
-            players: [{ ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, wonCards: [] }],
+            roomName: safeRoomName,
+            players: [{ ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: false, wonCards: [] }], // Le créateur est joueur
             currentReaderId: socket.id,
-            deck: deck ? [...deck] : [], // Le créateur envoie le deck complet
+            deck: [...deck],
             cemetery: [],
             isVoting: false,
             currentCard: null,
             votes: {},
             voteMode: voteMode || 'transparent',
-            scoreToWin: scoreToWin || 5,
+            scoreToWin: safeScore,
             timerRef: null,
             tickRef: null,
             tieBreakCandidates: [],
             tieBreakExcluded: [],
             phase: 'lobby'
         };
+
+        socket.join(roomCode);
+        socket.emit('room_created', {
+            roomCode,
+            roomName: safeRoomName,
+            players: rooms[roomCode].players,
+            currentReaderId: socket.id,
+            voteMode: rooms[roomCode].voteMode,
+            scoreToWin: rooms[roomCode].scoreToWin
+        });
 
         socket.join(roomCode);
         socket.emit('room_created', {
@@ -408,16 +418,52 @@ io.on('connection', (socket) => {
 socket.on('join_room', (data) => {
     const { roomCode, playerData } = data;
     const room = rooms[roomCode];
-    if (!room) {
-        return socket.emit('error_msg', "Room introuvable !");
-    }
+    if (!room) return socket.emit('error_msg', "Room introuvable !");
     
-    let isSpectator = false;
-    if (room.phase !== 'lobby') {
-        isSpectator = true;
+    // NOUVEAU : Tout le monde rejoint en spectateur par défaut
+    const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
+    room.players.push(newPlayer);
+    socket.join(roomCode);
+
+    socket.emit('room_joined', {
+        roomCode,
+        roomName: room.roomName,
+        players: room.players,
+        currentReaderId: room.currentReaderId,
+        voteMode: room.voteMode,
+        scoreToWin: room.scoreToWin,
+        phase: room.phase,
+        currentCard: room.currentCard,
+        isVoting: room.isVoting
+    });
+
+    socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
+});
+
+// NOUVEL ÉVÉNEMENT : toggle_role (Changer de rôle avant le début)
+socket.on('toggle_role', (roomCode) => {
+    const room = rooms[roomCode];
+    if (!room || room.phase !== 'lobby') return;
+
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+
+    player.isSpectator = !player.isSpectator;
+    
+    // Si celui qui devient spectateur était le lecteur (hôte), on transfère
+    if (player.isSpectator && room.currentReaderId === socket.id) {
+        const nextPlayer = room.players.find(p => !p.isSpectator);
+        if (nextPlayer) {
+            room.currentReaderId = nextPlayer.id;
+        }
+    } else if (!player.isSpectator && !room.players.find(p => p.id === room.currentReaderId && !p.isSpectator)) {
+        // Si plus de lecteur valide, celui qui rejoint devient lecteur
+        room.currentReaderId = player.id;
     }
 
-    const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: isSpectator, wonCards:[] };
+    io.to(roomCode).emit('update_players', room.players);
+    io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
+
     room.players.push(newPlayer);
     socket.join(roomCode);
 
@@ -443,21 +489,24 @@ socket.on('join_room', (data) => {
     socket.on('start_game', (roomCode) => {
         const room = rooms[roomCode];
         if (!room || room.currentReaderId !== socket.id) return;
-
-        if (room.phase !== 'lobby') {
-            return; 
-        }
+        if (room.phase !== 'lobby') return;
         
-        if (room.players.length < 3) {
-            return socket.emit('error_msg', "Il faut au moins 3 joueurs pour démarrer !");
+        const activePlayers = room.players.filter(p => !p.isSpectator);
+        if (activePlayers.length < 3) {
+            return socket.emit('error_msg', "Il faut au moins 3 joueurs actifs pour démarrer !");
         }
 
-        room.phase = 'drawing';
-        io.to(roomCode).emit('game_started', {
-            currentReaderId: room.currentReaderId,
-            players: room.players
-        });
-        console.log(`🎮 Partie démarrée dans la room ${roomCode}`);
+        // Lancement du compte à rebours
+        io.to(roomCode).emit('game_countdown', { seconds: 5 });
+
+        setTimeout(() => {
+            if (!rooms[roomCode]) return;
+            room.phase = 'drawing';
+            io.to(roomCode).emit('game_started', {
+                currentReaderId: room.currentReaderId,
+                players: room.players
+            });
+        }, 5000);
     });
 
     socket.on('replay_game', (data) => {
