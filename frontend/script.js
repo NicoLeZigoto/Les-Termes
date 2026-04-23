@@ -431,7 +431,7 @@ socket.on('vote_phase_start', (data) => {
         // Gestion du message textuel selon le rôle du joueur
         const amExcluded = window._tieBreakExcluded.includes(MY_ID);
         if (amExcluded) {
-            notReaderText.innerHTML = "⚖️ Tu es en train de te faire juger ! Attends le verdict...";
+            notReaderText.innerHTML = "Tu es en train de te faire juger ! Attends le verdict...";
         } else {
             const candidateNames = tieBreakCandidates.map(id => {
                 const p = players.find(player => player.id === id);
@@ -443,7 +443,7 @@ socket.on('vote_phase_start', (data) => {
             } else if (candidateNames.length > 2) {
                 namesStr = candidateNames.slice(0, -1).join(', ') + ' et ' + candidateNames[candidateNames.length - 1];
             }
-            notReaderText.innerHTML = `⚖️ Tu dois départager ${namesStr} !`;
+            notReaderText.innerHTML = `Tu dois départager ${namesStr} !`;
         }
     } else {
         const myPlayer = players.find(p => p.id === MY_ID);
@@ -610,11 +610,11 @@ socket.on('round_result', (data) => {
             if (GAME_VOTE_MODE === 'anonyme') {
                 const countText = voterIds.length > 1 ? `${voterIds.length} personnes ont` : `1 personne a`;
                 recapMessage = isUnanimous
-                    ? `<strong>UNANIMITÉ !</strong> Tout le monde a voté (en lâche) contre <strong style="color:#e74c3c;">${loser?.name}</strong>.<br><br><em>💬 "${punchline}"</em>`
+                    ? `Tout le monde a voté (en lâche) contre <strong style="color:#e74c3c;">${loser?.name}</strong>.<br><br><em>"${punchline}"</em>`
                     : `<strong>${countText}</strong> voté en secret contre <strong style="color:#e74c3c;">${loser?.name}</strong>.`;
             } else {
                 recapMessage = isUnanimous
-                    ? `<strong>UNANIMITÉ !</strong> Tout le monde désigne <strong style="color:#e74c3c;">${loser?.name}</strong>.<br><br><em>💬 "${punchline}"</em>`
+                    ? `Tout le monde désigne <strong style="color:#e74c3c;">${loser?.name}</strong>.<br><br><em>"${punchline}"</em>`
                     : `<strong>${votersText}</strong> ${voterNames.length > 1 ? 'ont' : 'a'} voté contre <strong style="color:#e74c3c;">${loser?.name}</strong>.`;
             }
 
@@ -658,7 +658,7 @@ socket.on('all_targets_dead', () => {
 
 socket.on('general_tie', () => {
     enqueueAnimation(async () => {
-        showNotification("⚖️ Égalité générale ! La carte est détruite.");
+        showNotification("Égalité générale. La carte est détruite !");
         await sleep(2000);
     });
 });
@@ -1468,7 +1468,7 @@ function renderCemetery() {
         el.innerHTML = `
             <p class="card-category"># ${card.category}</p>
             <p class="cemetery-card-text">${card.text}</p>
-            <p class="cemetery-reason">⚖️ Égalité — Manche ${entry.turn || ''}</p>
+            <p class="cemetery-reason">Égalité — Manche ${entry.turn || ''}</p>
         `;
         container.appendChild(el);
     });
