@@ -215,8 +215,17 @@ function enterGame() {
 // DÉMARRAGE DE PARTIE (bouton dans le lobby)
 // =========================================================
 
+let isGameStarting = false; 
+
 function startGameFromLobby() {
+    if (isGameStarting) return; 
+    
+    isGameStarting = true;
     socket.emit('start_game', currentRoomCode);
+
+    setTimeout(() => {
+        isGameStarting = false;
+    }, 2000);
 }
 
 socket.on('game_started', (data) => {
@@ -589,6 +598,15 @@ socket.on('tie_break_start', (data) => {
     window._myVoteValidated = false;
     document.getElementById('timer-display').classList.add('hidden');
     document.body.classList.remove('urgent-flash');
+
+    document.querySelectorAll('.avatar').forEach(el => {
+        el.classList.remove('selected-target', 'validated');
+    });
+    players.forEach(p => {
+        const ptr = document.getElementById(`pointer-${p.id}`);
+        if (ptr) ptr.style.opacity = '0';
+    });
+
     enqueueAnimation(async () => {
         await triggerTieAnimation(data.tiedPlayerIds);
     });
