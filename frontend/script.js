@@ -47,9 +47,18 @@ function stepPoints(delta) {
 }
 
 function backToMenu() {
-    if (!confirm("Es-tu sûr de vouloir quitter la partie ?")) return;
-
     audioManager.playSound('ui-click');
+    document.getElementById('confirm-modal').classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+    audioManager.playSound('ui-click');
+    document.getElementById('confirm-modal').classList.add('hidden');
+}
+
+function executeBackToMenu() {
+    audioManager.playSound('ui-click');
+    document.getElementById('confirm-modal').classList.add('hidden');
 
     // 1. On prévient le serveur qu'on part
     socket.emit('leave_room', currentRoomCode);
@@ -301,9 +310,15 @@ function replayGame() {
         [deck[i], deck[j]] = [deck[j], deck[i]];
     }
     socket.emit('replay_game', { roomCode: currentRoomCode, deck });
+    
+    // On cache l'écran de victoire uniquement pour le joueur qui a cliqué sur "Rejouer"
+    document.getElementById('victory-overlay').classList.add('hidden');
+    
+    // Reset local des statistiques
+    voteStats = { againstMe: {}, byMe: {} };
 }
 
-socket.on('game_restarted', (data) => {
+socket.on('game_reset_state', (data) => {
     players = data.players;
     currentReaderId = data.currentReaderId;
     cemetery =[];
@@ -314,8 +329,8 @@ socket.on('game_restarted', (data) => {
     
     document.getElementById('cemetery-count').innerText = "0";
     document.getElementById('cemetery-cards').innerHTML = "<p class='cemetery-empty'>Aucune carte brûlée pour l'instant...</p>";
-    document.getElementById('victory-overlay').classList.add('hidden');
     
+    // On force l'actualisation visuelle (ce qui reset les mains des joueurs automatiquement vu que wonCards est vidé sur le serv)
     renderPlayers();
     prepareNextTurn();
 });
@@ -634,6 +649,18 @@ socket.on('round_result', (data) => {
     enqueueAnimation(async () => {
         players = data.players;
 
+        // --- CORRECTION BUG 5: Comptabilisation des statistiques (Ennemis jurés) ---
+        Object.entries(data.votes).forEach(([targetId, voterIds]) => {
+            voterIds.forEach(voterId => {
+                if (targetId === MY_ID) {
+                    voteStats.againstMe[voterId] = (voteStats.againstMe[voterId] || 0) + 1;
+                }
+                if (voterId === MY_ID) {
+                    voteStats.byMe[targetId] = (voteStats.byMe[targetId] || 0) + 1;
+                }
+            });
+        });
+
         if (GAME_VOTE_MODE === 'semi') {
             Object.entries(data.votes).forEach(([targetId, voterIds]) => {
                 voterIds.forEach(voterId => showPointerVisual(voterId, targetId));
@@ -809,7 +836,13 @@ function prepareNextTurn() {
         deck.style.cursor = 'pointer';
         deck.style.opacity = '1';
         deck.onclick = startCardDraw;
-        showNotification("🃏 C'est ton tour de piocher !");
+        
+        const activePlayers = players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
+        if (activePlayers.length < 3) {
+            showNotification("⏳ En attente d'autres joueurs (3 min)...");
+        } else {
+            showNotification("🃏 C'est ton tour de piocher !");
+        }
     } else {
         deck.style.cursor = 'default';
         deck.style.opacity = '0.6';
@@ -840,8 +873,13 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
     const centerY = h / 2;
     const radius = (w / 2.5) * radiusScale;
 
-    players.forEach((p, index) => {
-        const angle = (index / players.length) * Math.PI * 2;
+    // 1. On sépare les joueurs actifs et les spectateurs
+    const activePlayers = players.filter(p => !p.isSpectator);
+    const spectators = players.filter(p => p.isSpectator);
+
+    // 2. Rendu des joueurs actifs autour de la table
+    activePlayers.forEach((p, index) => {
+        const angle = (index / activePlayers.length) * Math.PI * 2;
         let x = centerX + radius * Math.cos(angle) - 45;
         let y = centerY + radius * Math.sin(angle) - 45;
 
@@ -872,7 +910,7 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
         playerDiv.style.left = `${x}px`;
         playerDiv.style.top = `${y}px`;
 
-        // Mise à jour avatar (peut changer après mutilation) et maintien du cercle orange
+        // Mise à jour avatar
         const avatarEl = document.getElementById(`avatar-${p.id}`);
         if (avatarEl) {
             avatarEl.innerText = p.avatar;
@@ -893,7 +931,6 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
         playerDiv.classList.remove('mutilated', 'executed', 'spectator');
         if (p.afkCount >= 2 && !p.isDead) playerDiv.classList.add('mutilated');
         if (p.isDead || p.disconnected) playerDiv.classList.add('executed');
-        if (p.isSpectator) playerDiv.classList.add('spectator');
 
         // Pointeur mutilé
         const pointerEl = document.getElementById(`pointer-${p.id}`);
@@ -904,10 +941,22 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
         updatePlayerStack(p);
     });
 
-    // Supprimer les joueurs qui ne sont plus là
+    // 3. Rendu des spectateurs en haut à gauche
+    let spectatorsContainer = document.getElementById('spectators-container');
+    if (spectatorsContainer) {
+        spectatorsContainer.innerHTML = '';
+        spectators.forEach(s => {
+            const specDiv = document.createElement('div');
+            specDiv.className = 'spectator-badge';
+            specDiv.innerHTML = `<span>👀</span> <span>${s.avatar} ${s.name}</span>`;
+            spectatorsContainer.appendChild(specDiv);
+        });
+    }
+
+    // 4. Nettoyage des éléments DOM obsolètes
     document.querySelectorAll('.player').forEach(el => {
         const id = el.id.replace('player-', '');
-        if (!players.find(p => String(p.id) === id)) el.remove();
+        if (!activePlayers.find(p => String(p.id) === id)) el.remove();
     });
 }
 

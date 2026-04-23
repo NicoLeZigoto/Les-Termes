@@ -819,3 +819,18 @@
           outline-offset: 3px;
           animation: tiePulse 1.2s ease-in-out infinite;
       }
+
+      /* =========================================================
+         SPECTATEURS & MODAL
+         ========================================================= */
+         #spectators-container {
+            position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 10;
+        }
+        .spectator-badge {
+            background: rgba(26,42,58,0.8); border: 1px dashed #7a8fa8; border-radius: 8px; padding: 6px 12px; color: #a0b4c8; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-weight: bold;
+        }
+        
+        #confirm-modal {
+            position: fixed; inset: 0; background: rgba(5,10,18,0.92); backdrop-filter: blur(8px); z-index: 10000; display: flex; align-items: center; justify-content: center;
+        }
+        .confirm-box { width: min(400px, 90vw); text-align: center; }

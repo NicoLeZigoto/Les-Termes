@@ -133,8 +133,13 @@
                     <div id="animation-layer"></div>
                 </div>
             </div>
+            <div id="right-pane">
+                <button id="cemetery-btn" onclick="toggleCemetery()" title="Cimetière des cartes brûlées">🪦 <span id="cemetery-count">0</span></button>
+
+                <p id="waiting-text" class="placeholder-text">C'est à <strong id="reader-name">...</strong> de piocher !</p>
 
             <div id="right-pane">
+                <div id="spectators-container"></div>
                 <button id="cemetery-btn" onclick="toggleCemetery()" title="Cimetière des cartes brûlées">🪦 <span id="cemetery-count">0</span></button>
 
                 <p id="waiting-text" class="placeholder-text">C'est à <strong id="reader-name">...</strong> de piocher !</p>
@@ -200,6 +205,17 @@
     </div>
 
     <div id="toast-container"></div>
+
+    <div id="confirm-modal" class="hidden">
+        <div class="confirm-box lobby-panel card">
+            <h2 style="color: #d42b2b;">Quitter la partie ?</h2>
+            <p class="panel-desc">T'es sûr de vouloir abandonner tes potes ?</p>
+            <div style="display: flex; gap: 15px; margin-top: 24px;">
+                <button class="btn-create" onclick="executeBackToMenu()">Oui, je fuis</button>
+                <button class="btn-primary" onclick="closeConfirmModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
 
     <script src="cartes.js"></script>
     <script src="audio.js"></script> 
