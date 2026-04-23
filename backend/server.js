@@ -290,6 +290,15 @@ io.on('connection', (socket) => {
         const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
         const { playerData, scoreToWin, voteMode, deck } = data;
 
+        // 🛡️ L'Arbitre impose ses propres limites de sécurité
+        const safeName = (playerData.name || "Anonyme").trim().substring(0, 15) || "Anonyme";
+        const safeScore = Math.min(15, Math.max(2, scoreToWin || 5)); // Bloqué entre 2 et 15
+        
+        // Vérifie qu'il y a bien des cartes
+        if (!deck || !Array.isArray(deck) || deck.length === 0) {
+            return socket.emit('error_msg', "Impossible de créer la room : paquet de cartes invalide.");
+        }
+
         rooms[roomCode] = {
             players: [{ ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, wonCards: [] }],
             currentReaderId: socket.id,
@@ -399,19 +408,21 @@ io.on('connection', (socket) => {
     // ------ CHOIX DE CARTE ------
 
     socket.on('card_chosen', (data) => {
-        const { roomCode, card, keptCards } = data;
+        const { roomCode, card } = data; 
         const room = rooms[roomCode];
         if (!room || room.currentReaderId !== socket.id) return;
+        if (!room.pendingCards) return;
 
-        // Remettre les 2 cartes non choisies dans le deck
-        if (keptCards && keptCards.length > 0) {
-            room.deck.push(...keptCards);
-        }
+        const isValidCard = room.pendingCards.some(c => c.text === card.text);
+        if (!isValidCard) return; 
+
+        const cardsToKeep = room.pendingCards.filter(c => c.text !== card.text);
+        room.deck.push(...cardsToKeep);
+        room.pendingCards = null; 
 
         room.currentCard = card;
         room.phase = 'reading';
-
-        // Tout le monde voit la carte
+        
         io.to(roomCode).emit('show_card', { card });
         console.log(`📖 Carte choisie dans la room ${roomCode}`);
     });
@@ -431,8 +442,9 @@ io.on('connection', (socket) => {
     socket.on('cast_vote', (data) => {
         const { roomCode, targetId } = data;
         const room = rooms[roomCode];
-        if (!room || !room.isVoting) return;
-
+        
+        if (!room || room.phase !== 'voting') return;
+        
         const voter = room.players.find(p => p.id === socket.id);
         if (!voter || voter.isDead) return;
         if (socket.id === targetId) return;
