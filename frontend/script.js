@@ -227,7 +227,7 @@ socket.on('room_joined', (data) => {
     currentReaderId = data.currentReaderId;
     SCORE_TO_WIN = data.scoreToWin;
     GAME_VOTE_MODE = data.voteMode;
-    document.getElementById('display-room-name').innerText = data.roomName;
+    document.getElementById('display-room-name').innerText = data.roomName || "La Room";
     
     if (data.phase && data.phase !== 'lobby') {
         currentCard = data.currentCard;
@@ -242,21 +242,6 @@ function toggleRole() {
     audioManager.playSound('ui-click');
     socket.emit('toggle_role', currentRoomCode);
 }
-// ====== APRÈS ======
-socket.on('room_joined', (data) => {
-    currentRoomCode = data.roomCode;
-    players = data.players;
-    currentReaderId = data.currentReaderId;
-    SCORE_TO_WIN = data.scoreToWin;
-    GAME_VOTE_MODE = data.voteMode;
-    
-    if (data.phase && data.phase !== 'lobby') {
-        currentCard = data.currentCard;
-        isVoting = data.isVoting;
-    }
-    
-    enterGame(data.phase);
-});
 
 socket.on('player_joined', (data) => {
     players = data.players;
@@ -268,6 +253,25 @@ socket.on('update_players', (serverPlayers) => {
     enqueueAnimation(async () => {
         players = serverPlayers;
         renderPlayers();
+        // Rafraîchir l'état du bouton de rôle (pour le switch bidirectionnel)
+        const gameStarted = players.some(p => p.wonCards.length > 0 || p.score > 0) || currentCard;
+        if (!gameStarted) {
+            const myPlayer = players.find(p => p.id === MY_ID);
+            const btn = document.getElementById('btn-toggle-role');
+            const icon = document.getElementById('role-icon');
+            const text = document.getElementById('role-text');
+            if (btn && myPlayer) {
+                if (myPlayer.isSpectator) {
+                    btn.classList.remove('is-active');
+                    icon.innerText = "👉";
+                    text.innerText = "Rejoindre la partie";
+                } else {
+                    btn.classList.add('is-active');
+                    icon.innerText = "👀";
+                    text.innerText = "Passer en spectateur";
+                }
+            }
+        }
     });
 });
 
