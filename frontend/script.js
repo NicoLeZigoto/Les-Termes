@@ -479,7 +479,13 @@ socket.on('afk_players', (data) => {
         for (const afkInfo of data.afkPlayers) {
             const player = players.find(p => p.id === afkInfo.id);
             if (!player) continue;
+            
             player.afkCount = afkInfo.afkCount;
+            // 💀 On sécurise l'état local avec la vérité absolue du serveur
+            if (afkInfo.isDead) {
+                player.isDead = true;
+            }
+            
             await playCinematic(player);
         }
     });
@@ -656,6 +662,7 @@ function prepareNextTurn() {
     window._tieBreakExcluded = [];
 
     const deck = document.getElementById('deck');
+    deck.classList.remove('drawing'); 
     if (currentReaderId === MY_ID) {
         deck.style.cursor = 'pointer';
         deck.style.opacity = '1';
