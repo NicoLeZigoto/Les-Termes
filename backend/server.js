@@ -45,6 +45,39 @@ function broadcastPlayers(roomCode) {
     io.to(roomCode).emit('update_players', room.players);
 }
 
+function handlePlayerDeparture(socket, roomCode) {
+    const room = rooms[roomCode];
+    if (!room) return;
+
+    // On retire le joueur de la liste
+    const playerIndex = room.players.findIndex(p => p.id === socket.id);
+    if (playerIndex !== -1) {
+        const player = room.players[playerIndex];
+        room.players.splice(playerIndex, 1);
+        console.log(`🏃 ${player.name} a quitté la room ${roomCode}`);
+    }
+
+    // 🗑️ DESTRUCTION INSTANTANÉE : Si la room est vide
+    if (room.players.length === 0) {
+        delete rooms[roomCode];
+        console.log(`🗑️ Room ${roomCode} détruite : plus aucun joueur.`);
+        return; // Plus rien à faire
+    }
+
+    // Si la partie continue, on gère la suite (passage de flambeau, etc.)
+    if (room.currentReaderId === socket.id) {
+        // ... (utilise la logique de passage de flambeau qu'on a codé au bug n°4)
+        const nextReader = room.players.find(p => !p.isDead && !p.disconnected);
+        if (nextReader) {
+            room.currentReaderId = nextReader.id;
+            io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
+        }
+    }
+
+    // On prévient les survivants
+    io.to(roomCode).emit('update_players', room.players);
+}
+
 function getAlivePlayers(room) {
     return room.players.filter(p => !p.isDead);
 }
@@ -513,9 +546,24 @@ io.on('connection', (socket) => {
 
     // ------ DÉCONNEXION ------
 
+
+    socket.on('leave_room', (roomCode) => {
+        handlePlayerDeparture(socket, roomCode);
+        socket.leave(roomCode);
+    });
+    
     socket.on('disconnect', () => {
         console.log(`🔴 Déconnecté : ${socket.id}`);
-
+        
+        for (const [roomCode, room] of Object.entries(rooms)) {
+            const player = room.players.find(p => p.id === socket.id);
+            if (player) {
+                // Optionnel : Si la partie n'a pas commencé, on le supprime direct
+                // Si elle a commencé, on appelle handlePlayerDeparture
+                handlePlayerDeparture(socket, roomCode);
+                break;
+            }
+        }
         // Trouver la room du joueur
         for (const [roomCode, room] of Object.entries(rooms)) {
             const playerIndex = room.players.findIndex(p => p.id === socket.id);
