@@ -13,21 +13,20 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 // On stocke les rooms ici : { "1234": { players: [...] } }
 const rooms = {};
-
 io.on('connection', (socket) => {
     console.log(`🟢 Connecté : ${socket.id}`);
 
-    // Créer une room
     socket.on('create_room', (playerData) => {
         const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-        rooms[roomCode] = { players: [{ ...playerData, id: socket.id, score: 0, wonCards: [] }] };
+        rooms[roomCode] = { 
+            players: [{ ...playerData, id: socket.id, score: 0, wonCards: [] }],
+            currentReaderId: socket.id // Le créateur pioche en premier !
+        };
         
         socket.join(roomCode);
-        socket.emit('room_info', { roomCode, players: rooms[roomCode].players });
-        console.log(`👑 Room ${roomCode} créée par ${playerData.name}`);
+        socket.emit('room_info', { roomCode, players: rooms[roomCode].players, currentReaderId: socket.id });
     });
 
-    // Rejoindre une room
     socket.on('join_room', (data) => {
         const room = rooms[data.roomCode];
         if (room) {
@@ -35,17 +34,25 @@ io.on('connection', (socket) => {
             room.players.push(newPlayer);
             
             socket.join(data.roomCode);
-            // On prévient TOUT LE MONDE dans la room qu'il y a une mise à jour
             io.to(data.roomCode).emit('update_players', room.players);
-            socket.emit('room_info', { roomCode: data.roomCode, players: room.players });
+            socket.emit('room_info', { roomCode: data.roomCode, players: room.players, currentReaderId: room.currentReaderId });
         } else {
             socket.emit('error_msg', "Room introuvable !");
         }
     });
 
+    // 📩 NOUVEAU : Le lecteur a choisi une carte, on l'envoie aux autres
+    socket.on('card_chosen', (data) => {
+        socket.to(data.roomCode).emit('show_card', data.card);
+    });
+
+    // 📩 NOUVEAU : Le lecteur lance le vote, on prévient les autres
+    socket.on('start_vote_timer', (roomCode) => {
+        socket.to(roomCode).emit('vote_started');
+    });
+
     socket.on('disconnect', () => {
         console.log(`🔴 Déconnecté : ${socket.id}`);
-        // Ici on pourrait gérer la déconnexion d'un joueur en pleine partie
     });
 });
 
