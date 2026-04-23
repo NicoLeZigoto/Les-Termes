@@ -134,11 +134,31 @@
                 </div>
             </div>
             <div id="right-pane">
+                <h2 id="display-room-name" class="room-neon-title">LA ROOM</h2>
+
+                <div id="role-toggle-area" class="role-toggle-container">
+                    <button id="btn-toggle-role" class="btn-role-toggle" onclick="toggleRole()">
+                        <span id="role-icon">👀</span> <span id="role-text">Passer en joueur</span>
+                    </button>
+                </div>
+
                 <div id="spectators-container"></div>
                 
                 <button id="cemetery-btn" onclick="toggleCemetery()" title="Cimetière des cartes brûlées">🪦 <span id="cemetery-count">0</span></button>
 
-                <p id="waiting-text" class="placeholder-text">C'est à <strong id="reader-name">...</strong> de piocher !</p>
+                <div id="waiting-area" style="width: 100%; position: relative;">
+                    <p id="waiting-text" class="placeholder-text">C'est à <strong id="reader-name">...</strong> de piocher !</p>
+                    
+                    <div id="start-controls" class="hidden" style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                        <p class="placeholder-text">Prêt à en découdre ?</p>
+                        <button class="btn-primary btn-hero" onclick="startGameFromLobby()" style="font-size: 1.5rem; padding: 15px 40px;">Commencer la partie 🔥</button>
+                    </div>
+                    
+                    <div id="game-countdown-overlay" class="hidden">
+                        <p class="placeholder-text" style="color: #e8ddd0;">La partie commence dans...</p>
+                        <div id="countdown-val" class="countdown-number">5</div>
+                    </div>
+                </div>
 
                 <div id="current-card" class="card hidden">
                     <p id="card-category" class="card-category"># CATEGORIE</p>
