@@ -144,6 +144,22 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
             // On envoie aussi la confirmation de décès au client
             afkPlayers: afkPlayers.map(p => ({ id: p.id, afkCount: p.afkCount, isDead: p.isDead })) 
         });
+
+        const aliveAfterAfk = room.players.filter(p => !p.isDead && !p.disconnected);
+    
+        if (aliveAfterAfk.length <= 2) {
+            // Le seuil critique est atteint, on force la fin de partie !
+            clearTimer(room);
+            if (aliveAfterAfk.length > 0) {
+                const winner = aliveAfterAfk.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+                
+                // On attend que l'animation d'exécution se termine avant d'afficher l'écran de victoire
+                setTimeout(() => {
+                    io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
+                }, afkDelay + 1000);
+            }
+            return; // TRÈS IMPORTANT : On arrête la fonction ici, inutile de compter les votes.
+        }
     }
 
     const survivors = getAlivePlayers(room); 
@@ -612,13 +628,18 @@ socket.on('cast_vote', (data) => {
                 }
             }
 
-            // Si partie en cours et plus assez de joueurs vivants
+
             const alive = room.players.filter(p => !p.isDead && !p.disconnected);
-            if (alive.length < 3 && room.phase !== 'lobby') {
+            
+            if (alive.length <= 2 && room.phase !== 'lobby') {
                 clearTimer(room);
                 if (alive.length > 0) {
                     const winner = alive.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-                    io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
+                    
+                    io.to(roomCode).emit('game_over', { 
+                        winnerId: winner.id, 
+                        players: room.players 
+                    });
                 }
             }
             break;
