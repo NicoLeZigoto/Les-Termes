@@ -74,14 +74,15 @@ function joinRoom() {
 // 3. On écoute les réponses du serveur
 socket.on('room_info', (data) => {
     currentRoomCode = data.roomCode;
-    players = data.players; // On remplace la liste de bots par les vrais joueurs
+    players = data.players; 
+    currentReaderId = data.currentReaderId; // NOUVEAU : On sait qui doit lire !
     
-    // On cache le lobby et on affiche le jeu
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('game-wrapper').classList.remove('hidden');
     document.getElementById('room-badge').innerText = `Room: ${currentRoomCode}`;
     
     renderPlayers();
+    prepareNextTurn(); // NOUVEAU : Active le deck uniquement pour le lecteur
 });
 
 socket.on('update_players', (serverPlayers) => {
@@ -341,7 +342,12 @@ if (document.readyState === 'loading') {
 // CODE ORIGINAL : LOGIQUE DU JEU (Corrigé par nous)
 // =========================================================
 
-const MY_ID = 99;
+let MY_ID = "";
+
+socket.on('connect', () => {
+    MY_ID = socket.id;
+});
+
 let SCORE_TO_WIN = 5;
 let GAME_VOTE_MODE = 'transparent';
 let currentReaderId = MY_ID;
@@ -544,10 +550,6 @@ function prepareNextTurn() {
         endGameBecauseDeckIsEmpty();
         return;
     }
-
-    if (currentReaderId !== MY_ID) {
-        setTimeout(() => botDrawCard(), 2000);
-    }
 }
 
 function startCardDraw() {
@@ -644,6 +646,10 @@ function revealChosenCard(chosenCard, chosenIndex) {
             cardEl.style.transform = 'scale(0.9)';
         }
     });
+    
+    if (currentReaderId === MY_ID) {
+        socket.emit('card_chosen', { roomCode: currentRoomCode, card: currentCard });
+    }
 
     setTimeout(() => {
         document.getElementById('card-selection-overlay').classList.add('hidden');
@@ -720,7 +726,9 @@ function startVoteTimer() {
     display.innerText = currentTimer;
     display.style.color = '#e74c3c'; 
     
-    triggerAIVotes();
+    if (currentReaderId === MY_ID && !isFromNetwork) {
+        socket.emit('start_vote_timer', currentRoomCode);
+    }
 
     timerInterval = setInterval(() => {
         currentTimer--;
@@ -1723,3 +1731,14 @@ function toggleCemetery() {
     const overlay = document.getElementById('cemetery-overlay');
     overlay.classList.toggle('hidden');
 }
+
+// Quand le serveur nous envoie la carte choisie par le lecteur
+socket.on('show_card', (card) => {
+    currentCard = card;
+    proceedWithChosenCard(); // On affiche la carte direct sur notre écran
+});
+
+// Quand le serveur nous dit que le lecteur a cliqué sur "Lancer le vote"
+socket.on('vote_started', () => {
+    startVoteTimer(true); // true = ça vient du réseau, on lance notre propre chrono
+});
