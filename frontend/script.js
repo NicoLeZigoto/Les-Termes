@@ -191,8 +191,10 @@ socket.on('player_joined', (data) => {
 });
 
 socket.on('update_players', (serverPlayers) => {
-    players = serverPlayers;
-    renderPlayers();
+    enqueueAnimation(async () => {
+        players = serverPlayers;
+        renderPlayers();
+    });
 });
 
 socket.on('error_msg', (msg) => showNotification(msg));
@@ -458,6 +460,9 @@ function handleVoteClick(targetId) {
 
     // On stocke temporairement la cible (pas encore validé)
     window._pendingVoteTarget = targetId;
+    if (GAME_VOTE_MODE === 'transparent') {
+        socket.emit('point_target', { roomCode: currentRoomCode, targetId: targetId });
+    }
 }
 
 function validateMyVote() {
@@ -646,17 +651,21 @@ socket.on('deck_empty', (data) => {
 });
 
 socket.on('player_disconnected', (data) => {
-    players = data.players;
-    renderPlayers();
-    showNotification(`💔 ${data.playerName} a quitté la partie !`);
+    enqueueAnimation(async () => {
+        players = data.players;
+        renderPlayers();
+        showNotification(`💔 ${data.playerName} a quitté la partie !`);
+    });
 });
 
 socket.on('reader_changed', (data) => {
-    currentReaderId = data.newReaderId;
-    renderPlayers();
-    prepareNextTurn();
-    const newReader = players.find(p => p.id === data.newReaderId);
-    if (newReader) showNotification(`${newReader.avatar} ${newReader.name} doit maintenant piocher.`);
+    enqueueAnimation(async () => {
+        currentReaderId = data.newReaderId;
+        renderPlayers();
+        prepareNextTurn();
+        const newReader = players.find(p => p.id === data.newReaderId);
+        if (newReader) showNotification(`${newReader.avatar} ${newReader.name} doit maintenant piocher.`);
+    });
 });
 
 // =========================================================
