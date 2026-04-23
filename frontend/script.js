@@ -657,49 +657,59 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
     const radius = (w / 2.5) * radiusScale;
 
     players.forEach((p, index) => {
-        const angle = (2 * Math.PI * index) / players.length - Math.PI / 2;
-        const x = centerX + radius * Math.cos(angle);
-        const y = centerY + radius * Math.sin(angle);
-        p.centerX = x;
-        p.centerY = y;
+        const angle = (index / players.length) * Math.PI * 2;
+        let x = centerX + radius * Math.cos(angle) - 45;
+        let y = centerY + radius * Math.sin(angle) - 45;
 
-        let playerEl = document.getElementById(`player-${p.id}`);
-        if (!playerEl) {
-            playerEl = document.createElement('div');
-            playerEl.className = 'player';
-            playerEl.id = `player-${p.id}`;
-            playerEl.innerHTML = `
-                <div class="avatar-wrapper">
-                    <div class="avatar${p.isDead ? ' dead' : ''}" id="avatar-${p.id}" onclick="handleVoteClick('${p.id}')">
-                        <span class="avatar-emoji">${p.avatar}</span>
-                        <span class="avatar-name">${p.name}</span>
-                    </div>
-                    <span class="reader-crown hidden" id="crown-${p.id}">👑</span>
-                    <div class="pointer" id="pointer-${p.id}">👉</div>
-                    <div class="card-stack" id="stack-${p.id}" onclick="showPlayerCards('${p.id}')"></div>
-                    <div class="score-badge" id="score-${p.id}">${p.score}</div>
-                </div>
-            `;
-            table.appendChild(playerEl);
-        } else {
-            const avatarEl = playerEl.querySelector('.avatar');
-            if (p.isDead) avatarEl.classList.add('dead');
-            else avatarEl.classList.remove('dead');
-            const emojiEl = avatarEl.querySelector('.avatar-emoji');
-            if (emojiEl) emojiEl.innerText = p.avatar;
+        if (centerTargetId === p.id) {
+            x = centerX - 45;
+            y = centerY - 45;
         }
 
-        playerEl.style.left = `${x - 45}px`;
-        playerEl.style.top = `${y - 45}px`;
+        p.centerX = x + 45;
+        p.centerY = y + 45;
 
-        // Couronne lecteur
-        document.querySelectorAll('.reader-crown').forEach(c => c.classList.add('hidden'));
-        const crown = document.getElementById(`crown-${currentReaderId}`);
-        if (crown) crown.classList.remove('hidden');
+        let playerDiv = document.getElementById(`player-${p.id}`);
+        if (!playerDiv) {
+            playerDiv = document.createElement('div');
+            playerDiv.className = 'player';
+            playerDiv.id = `player-${p.id}`;
+            playerDiv.onclick = () => handleVoteClick(p.id);
+            playerDiv.innerHTML = `
+                <div class="pointer" id="pointer-${p.id}"></div>
+                <div class="avatar" id="avatar-${p.id}">${p.avatar}</div>
+                <div class="player-name">${p.name}</div>
+                <div class="player-stack" id="stack-${p.id}" onclick="event.stopPropagation(); showPlayerCards('${p.id}')"></div>
+            `;
+            table.appendChild(playerDiv);
+        }
 
-        // Score
-        const scoreBadge = document.getElementById(`score-${p.id}`);
-        if (scoreBadge) scoreBadge.innerText = p.score;
+        // Mise à jour position
+        playerDiv.style.left = `${x}px`;
+        playerDiv.style.top = `${y}px`;
+
+        // Mise à jour avatar (peut changer après mutilation)
+        const avatarEl = document.getElementById(`avatar-${p.id}`);
+        if (avatarEl) avatarEl.innerText = p.avatar;
+
+        // Icône lecteur
+        let iconEl = playerDiv.querySelector('.reader-icon');
+        if (p.id === currentReaderId && !p.isDead) {
+            if (!iconEl) playerDiv.insertAdjacentHTML('afterbegin', '<div class="reader-icon">🎙️</div>');
+        } else if (iconEl) {
+            iconEl.remove();
+        }
+
+        // Classes état
+        playerDiv.classList.remove('mutilated', 'executed');
+        if (p.afkCount >= 2 && !p.isDead) playerDiv.classList.add('mutilated');
+        if (p.isDead || p.disconnected) playerDiv.classList.add('executed');
+
+        // Pointeur mutilé
+        const pointerEl = document.getElementById(`pointer-${p.id}`);
+        if (pointerEl) {
+            pointerEl.classList.toggle('mutilated-pointer', p.afkCount >= 2 && !p.isDead);
+        }
 
         updatePlayerStack(p);
     });
@@ -707,7 +717,7 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
     // Supprimer les joueurs qui ne sont plus là
     document.querySelectorAll('.player').forEach(el => {
         const id = el.id.replace('player-', '');
-        if (!players.find(p => p.id === id)) el.remove();
+        if (!players.find(p => String(p.id) === id)) el.remove();
     });
 }
 
