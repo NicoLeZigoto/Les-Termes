@@ -28,8 +28,15 @@ function goToStep2() {
         pseudoInput.focus();
         return;
     }
-    document.getElementById('step-identity').classList.add('hidden');
-    document.getElementById('step-choose').classList.remove('hidden');
+
+    const pathCode = window.location.pathname.replace('/', '');
+    if (pathCode.length === 4 && !isNaN(pathCode)) {
+        document.getElementById('input-room-code').value = pathCode;
+        joinRoom(); 
+    } else {
+        document.getElementById('step-identity').classList.add('hidden');
+        document.getElementById('step-choose').classList.remove('hidden');
+    }
 }
 
 function stepPoints(delta) {
@@ -206,6 +213,9 @@ function enterGame() {
     document.getElementById('game-wrapper').classList.remove('hidden');
     updateCardSkinPickerVisibility();
     document.getElementById('room-badge').innerText = `Room: ${currentRoomCode}`;
+    
+    window.history.pushState({}, '', `/${currentRoomCode}`);
+    
     initRoomBadgeShare();
     setTimeout(() => {
         renderPlayers();
@@ -1248,6 +1258,16 @@ function initLobbyUI() {
     startIdentitySubtitleRotation();
     initCardSkinPicker();
 
+    const pathCode = window.location.pathname.replace('/', '');
+    if (pathCode.length === 4 && !isNaN(pathCode)) {
+
+        document.getElementById('input-room-code').value = pathCode; 
+        
+        document.getElementById('step-home').classList.add('hidden');
+        document.getElementById('step-identity').classList.remove('hidden');
+        document.getElementById('identity-subtitle').innerText = "Tu as été invité ! C'est quoi ton p'tit nom ?";
+    }
+
     const pseudoInput = document.getElementById('input-pseudo');
     if (pseudoInput) pseudoInput.placeholder = PSEUDO_PLACEHOLDERS[Math.floor(Math.random() * PSEUDO_PLACEHOLDERS.length)];
 
@@ -1305,11 +1325,16 @@ function showNotification(msg) {
 function initRoomBadgeShare() {
     const badge = document.getElementById('room-badge');
     if (!badge) return;
-    badge.title = "Cliquer pour copier le code";
+    badge.title = "Cliquer pour copier le lien d'invitation";
     badge.style.cursor = 'pointer';
-    badge.addEventListener('click', () => {
-        navigator.clipboard.writeText(currentRoomCode).catch(() => {});
-        showNotification(`📋 Code ${currentRoomCode} copié !`);
+    
+    const newBadge = badge.cloneNode(true);
+    badge.parentNode.replaceChild(newBadge, badge);
+    
+    newBadge.addEventListener('click', () => {
+        const inviteLink = `${window.location.origin}/${currentRoomCode}`;
+        navigator.clipboard.writeText(inviteLink).catch(() => {});
+        showNotification(`🔗 Lien d'invitation copié !`);
     });
 }
 
