@@ -8,6 +8,10 @@ const app = express();
 app.use(cors());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
@@ -241,6 +245,8 @@ function scheduleNextRound(roomCode, delay) {
         room.votes = {};
         room.currentCard = null;
         room.tieCount = 0; 
+        room.tieBreakCandidates = [];
+        room.tieBreakExcluded = [];
         
         io.to(roomCode).emit('next_round', {
             currentReaderId: room.currentReaderId,
@@ -277,7 +283,9 @@ function startVotePhase(roomCode, isTieBreak = false, tieBreakCandidates = []) {
         io.to(roomCode).emit('timer_tick', { remaining });
 
         // Fast-forward : si tout le monde a voté
-        const excluded = room.tieBreakExcluded || [];
+        // 🛡️ CORRECTION : On n'ignore des joueurs QUE si on est VRAIMENT en Tie-Break
+        const excluded = isTieBreak ? (room.tieBreakExcluded || []) : [];
+        
         const eligibleCount = room.players.filter(p => !p.isDead && !excluded.includes(p.id)).length;
         const votedCount = Object.keys(room.votes).filter(id => !excluded.includes(id)).length;
 
