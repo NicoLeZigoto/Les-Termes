@@ -57,11 +57,22 @@ function handlePlayerDeparture(socket, roomCode) {
         console.log(`🏃 ${player.name} a quitté la room ${roomCode}`);
     }
 
-    // 🗑️ DESTRUCTION INSTANTANÉE : Si la room est vide
+    // 🕐 PERSISTANCE : Si la room est vide, attendre 2 minutes avant de la détruire
     if (room.players.length === 0) {
-        delete rooms[roomCode];
-        console.log(`🗑️ Room ${roomCode} détruite : plus aucun joueur.`);
-        return; // Plus rien à faire
+        console.log(`⏳ Room ${roomCode} vide — destruction dans 2 minutes.`);
+        room._emptyTimer = setTimeout(() => {
+            if (rooms[roomCode] && rooms[roomCode].players.length === 0) {
+                delete rooms[roomCode];
+                console.log(`🗑️ Room ${roomCode} détruite après 2 minutes vide.`);
+            }
+        }, 2 * 60 * 1000);
+        return;
+    }
+
+    // Si quelqu'un rejoint une room qui avait un timer de destruction, l'annuler
+    if (room._emptyTimer) {
+        clearTimeout(room._emptyTimer);
+        room._emptyTimer = null;
     }
 
     // Si la partie continue, on gère la suite (passage de flambeau, etc.)
@@ -402,15 +413,6 @@ io.on('connection', (socket) => {
             voteMode: rooms[roomCode].voteMode,
             scoreToWin: rooms[roomCode].scoreToWin
         });
-
-        socket.join(roomCode);
-        socket.emit('room_created', {
-            roomCode,
-            players: rooms[roomCode].players,
-            currentReaderId: socket.id,
-            voteMode: rooms[roomCode].voteMode,
-            scoreToWin: rooms[roomCode].scoreToWin
-        });
         console.log(`🏠 Room ${roomCode} créée par ${socket.id}`);
     });
 
@@ -419,8 +421,29 @@ socket.on('join_room', (data) => {
     const { roomCode, playerData } = data;
     const room = rooms[roomCode];
     if (!room) return socket.emit('error_msg', "Room introuvable !");
-    
-    // NOUVEAU : Tout le monde rejoint en spectateur par défaut
+
+    // Annuler le timer de destruction si quelqu'un rejoint une room vide
+    if (room._emptyTimer) {
+        clearTimeout(room._emptyTimer);
+        room._emptyTimer = null;
+        console.log(`✅ Timer de destruction annulé pour room ${roomCode} — nouveau joueur`);
+    }
+
+    // Éviter les doublons (reconnexion rapide)
+    const existing = room.players.find(p => p.id === socket.id);
+    if (existing) {
+        return socket.emit('room_joined', {
+            roomCode,
+            roomName: room.roomName,
+            players: room.players,
+            currentReaderId: room.currentReaderId,
+            voteMode: room.voteMode,
+            scoreToWin: room.scoreToWin,
+            phase: room.phase,
+            currentCard: room.currentCard,
+            isVoting: room.isVoting
+        });
+    }
     const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
     room.players.push(newPlayer);
     socket.join(roomCode);
@@ -438,9 +461,10 @@ socket.on('join_room', (data) => {
     });
 
     socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
+    console.log(`👤 ${newPlayer.name} (${socket.id}) a rejoint la room ${roomCode} en tant que spectateur. Total joueurs: ${room.players.length}`);
 });
 
-// NOUVEL ÉVÉNEMENT : toggle_role (Changer de rôle avant le début)
+// toggle_role : switch spectateur ↔ joueur (lobby uniquement, bidirectionnel)
 socket.on('toggle_role', (roomCode) => {
     const room = rooms[roomCode];
     if (!room || room.phase !== 'lobby') return;
@@ -449,39 +473,27 @@ socket.on('toggle_role', (roomCode) => {
     if (!player) return;
 
     player.isSpectator = !player.isSpectator;
-    
-    // Si celui qui devient spectateur était le lecteur (hôte), on transfère
+    console.log(`🔄 ${player.name} est maintenant ${player.isSpectator ? 'spectateur' : 'joueur'} dans ${roomCode}`);
+
+    // Si celui qui devient spectateur était le lecteur, transférer le flambeau
     if (player.isSpectator && room.currentReaderId === socket.id) {
-        const nextPlayer = room.players.find(p => !p.isSpectator);
+        const nextPlayer = room.players.find(p => !p.isSpectator && p.id !== socket.id);
         if (nextPlayer) {
             room.currentReaderId = nextPlayer.id;
+        } else {
+            // Plus aucun joueur actif, on reste lecteur nominal jusqu'à ce que quelqu'un rejoigne
+            room.currentReaderId = null;
         }
-    } else if (!player.isSpectator && !room.players.find(p => p.id === room.currentReaderId && !p.isSpectator)) {
-        // Si plus de lecteur valide, celui qui rejoint devient lecteur
-        room.currentReaderId = player.id;
+    } else if (!player.isSpectator) {
+        // Si plus aucun lecteur valide, le nouveau joueur devient lecteur
+        const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator);
+        if (!currentReaderValid) {
+            room.currentReaderId = player.id;
+        }
     }
 
     io.to(roomCode).emit('update_players', room.players);
     io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
-
-    room.players.push(newPlayer);
-    socket.join(roomCode);
-
-    // Confirmer au nouveau joueur
-    socket.emit('room_joined', {
-        roomCode,
-        players: room.players,
-        currentReaderId: room.currentReaderId,
-        voteMode: room.voteMode,
-        scoreToWin: room.scoreToWin,
-        phase: room.phase,
-        currentCard: room.currentCard,
-        isVoting: room.isVoting
-    });
-
-    // Prévenir les autres
-    socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
-    console.log(`👤 ${socket.id} a rejoint la room ${roomCode} ${isSpectator ? '(Spectateur)' : ''}`);
 });
 
     // ------ DÉMARRAGE DE PARTIE ET REJOUER ------
