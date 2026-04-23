@@ -109,6 +109,25 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
         });
     }
 
+    const survivors = getAlivePlayers(room); 
+    if (survivors.length < 3) {
+
+        setTimeout(() => {
+            let winner;
+            if (survivors.length > 0) {
+
+                winner = survivors.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+            } else {
+
+                winner = room.players[0]; 
+            }
+            
+            io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
+        }, afkDelay + 1000); 
+        
+        return;
+    }
+
     const voteCounts = {};
     const validTargets = isTieBreak ? tieBreakCandidates : null;
     Object.values(room.votes).forEach(targetId => {
@@ -156,8 +175,6 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
         loser.score++;
         loser.wonCards.push(room.currentCard);
         room.currentReaderId = loserId;
-
-        broadcastPlayers(roomCode);
 
         io.to(roomCode).emit('round_result', {
             type: 'loser',
@@ -437,6 +454,21 @@ io.on('connection', (socket) => {
         startVotePhase(roomCode);
     });
 
+
+    // ------ POINTEUR EN TEMPS RÉEL (MODE TRANSPARENT) ------
+    socket.on('point_target', (data) => {
+        const { roomCode, targetId } = data;
+        const room = rooms[roomCode];
+        
+        if (!room || room.phase !== 'voting' || room.voteMode !== 'transparent') return;
+
+        const voter = room.players.find(p => p.id === socket.id);
+        if (!voter || voter.isDead) return; 
+        if (room.votes[socket.id]) return; 
+
+        socket.to(roomCode).emit('pointer_update', { voterId: socket.id, targetId });
+    });
+
     // ------ VOTE D'UN JOUEUR ------
 
     socket.on('cast_vote', (data) => {
@@ -444,7 +476,7 @@ io.on('connection', (socket) => {
         const room = rooms[roomCode];
         
         if (!room || room.phase !== 'voting') return;
-        
+
         const voter = room.players.find(p => p.id === socket.id);
         if (!voter || voter.isDead) return;
         if (socket.id === targetId) return;
