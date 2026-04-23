@@ -834,3 +834,74 @@
             position: fixed; inset: 0; background: rgba(5,10,18,0.92); backdrop-filter: blur(8px); z-index: 10000; display: flex; align-items: center; justify-content: center;
         }
         .confirm-box { width: min(400px, 90vw); text-align: center; }
+
+
+        /* AVANT (ajouter à la fin) */
+
+/* APRÈS */
+.room-neon-title {
+    font-size: 3.5rem;
+    color: #d42b2b;
+    margin: 0 0 20px;
+    text-shadow:
+        2px 2px 0 #0a1018,
+        0 0 8px rgba(212,43,43,0.8),
+        0 0 20px rgba(212,43,43,0.4);
+    letter-spacing: 1px;
+    line-height: 1;
+    animation: neonFlicker 5s infinite;
+    text-align: center;
+}
+
+.role-toggle-container {
+    margin-bottom: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.btn-role-toggle {
+    background: #1a2a3a;
+    border: 2px solid #2e4060;
+    color: #7a8fa8;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-family: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-role-toggle:hover {
+    border-color: #d42b2b;
+    color: #e8ddd0;
+    background: #1e2d3d;
+}
+
+.btn-role-toggle.is-active {
+    border-color: #27ae60;
+    color: #e8ddd0;
+    background: rgba(39, 174, 96, 0.1);
+}
+
+#game-countdown-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 26, 38, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: 20px;
+}
+
+.countdown-number {
+    font-size: 8rem;
+    color: #d42b2b;
+    font-weight: bold;
+    text-shadow: 0 0 30px rgba(212, 43, 43, 0.6);
+}

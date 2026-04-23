@@ -179,11 +179,11 @@ function createRoom() {
     const pseudo = document.getElementById('input-pseudo').value.trim();
     if (!pseudo) return showNotification("Pseudo obligatoire !");
 
+    const roomName = document.getElementById('input-room-name').value.trim() || "La Room";
     const scoreToWin = parseInt(document.getElementById('input-points').value) || 5;
     const voteMode = document.getElementById('select-vote-mode').value;
     const deck = typeof cartesJSON !== 'undefined' ? [...cartesJSON] : [];
 
-    // On mélange le deck
     for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -191,6 +191,7 @@ function createRoom() {
 
     socket.emit('create_room', {
         playerData: { name: pseudo, avatar: selectedAvatar },
+        roomName,
         scoreToWin,
         voteMode,
         deck
@@ -216,8 +217,31 @@ socket.on('room_created', (data) => {
     currentReaderId = data.currentReaderId;
     SCORE_TO_WIN = data.scoreToWin;
     GAME_VOTE_MODE = data.voteMode;
+    document.getElementById('display-room-name').innerText = data.roomName;
     enterGame();
 });
+
+socket.on('room_joined', (data) => {
+    currentRoomCode = data.roomCode;
+    players = data.players;
+    currentReaderId = data.currentReaderId;
+    SCORE_TO_WIN = data.scoreToWin;
+    GAME_VOTE_MODE = data.voteMode;
+    document.getElementById('display-room-name').innerText = data.roomName;
+    
+    if (data.phase && data.phase !== 'lobby') {
+        currentCard = data.currentCard;
+        isVoting = data.isVoting;
+    }
+    
+    enterGame(data.phase);
+});
+
+// NOUVELLE FONCTION : toggleRole
+function toggleRole() {
+    audioManager.playSound('ui-click');
+    socket.emit('toggle_role', currentRoomCode);
+}
 // ====== APRÈS ======
 socket.on('room_joined', (data) => {
     currentRoomCode = data.roomCode;
@@ -813,11 +837,52 @@ socket.on('reader_changed', (data) => {
 // =========================================================
 // INTERFACE — Fonctions d'affichage (inchangées)
 // =========================================================
-
 function prepareNextTurn() {
+    const myPlayer = players.find(p => p.id === MY_ID);
+    const isLobby = !currentCard && (players.every(p => p.score === 0)); // Détection simple du lobby
+
+    // Gestion du bouton de rôle (visible uniquement avant le début)
+    const activePlayers = players.filter(p => !p.isSpectator);
+    const gameStarted = players.some(p => p.wonCards.length > 0 || p.score > 0) || currentCard;
+    
+    if (gameStarted) {
+        document.getElementById('role-toggle-area').classList.add('hidden');
+    } else {
+        document.getElementById('role-toggle-area').classList.remove('hidden');
+        const btn = document.getElementById('btn-toggle-role');
+        const icon = document.getElementById('role-icon');
+        const text = document.getElementById('role-text');
+        
+        if (myPlayer && myPlayer.isSpectator) {
+            btn.classList.remove('is-active');
+            icon.innerText = "👉";
+            text.innerText = "Rejoindre la partie";
+        } else {
+            btn.classList.add('is-active');
+            icon.innerText = "👀";
+            text.innerText = "Passer en spectateur";
+        }
+    }
+
     const readerName = players.find(p => p.id === currentReaderId)?.name || '...';
     document.getElementById('reader-name').innerText = readerName;
-    document.getElementById('waiting-text').classList.remove('hidden');
+
+    // Si on est au tout début (Lobby)
+    if (!gameStarted) {
+        document.getElementById('waiting-text').classList.add('hidden');
+        if (currentReaderId === MY_ID) {
+            document.getElementById('start-controls').classList.remove('hidden');
+        } else {
+            document.getElementById('start-controls').classList.add('hidden');
+            document.getElementById('waiting-text').classList.remove('hidden');
+            document.getElementById('waiting-text').innerText = "En attente du chef de room...";
+        }
+    } else {
+        document.getElementById('start-controls').classList.add('hidden');
+        document.getElementById('waiting-text').classList.remove('hidden');
+        document.getElementById('waiting-text').innerHTML = `C'est à <strong id="reader-name">${readerName}</strong> de piocher !`;
+    }
+
     document.getElementById('current-card').classList.add('hidden');
     document.getElementById('recap-display').classList.add('hidden');
     document.getElementById('btn-start-vote').classList.add('hidden');
@@ -832,14 +897,16 @@ function prepareNextTurn() {
 
     const deck = document.getElementById('deck');
     deck.classList.remove('drawing'); 
-    if (currentReaderId === MY_ID) {
+    
+    // On rend le deck cliquable UNIQUEMENT si la partie a commencé
+    if (gameStarted && currentReaderId === MY_ID) {
         deck.style.cursor = 'pointer';
         deck.style.opacity = '1';
         deck.onclick = startCardDraw;
         
-        const activePlayers = players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
-        if (activePlayers.length < 3) {
-            showNotification("⏳ En attente d'autres joueurs (3 min)...");
+        const alivePlayers = players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
+        if (alivePlayers.length < 3) {
+            showNotification("⏳ En attente d'autres joueurs pour piocher...");
         } else {
             showNotification("🃏 C'est ton tour de piocher !");
         }
@@ -849,6 +916,27 @@ function prepareNextTurn() {
         deck.onclick = null;
     }
 }
+
+// Le socket du compte à rebours est parfait ici
+socket.on('game_countdown', (data) => {
+    const overlay = document.getElementById('game-countdown-overlay');
+    const val = document.getElementById('countdown-val');
+    overlay.classList.remove('hidden');
+    
+    let count = data.seconds;
+    val.innerText = count;
+    
+    const interval = setInterval(() => {
+        count--;
+        if (count <= 0) {
+            clearInterval(interval);
+            overlay.classList.add('hidden');
+        } else {
+            val.innerText = count;
+            audioManager.playSound('vote-tick');
+        }
+    }, 1000);
+});
 
 function resetForNextRound() {
     document.querySelectorAll('.avatar').forEach(el => el.classList.remove('selected-target', 'validated', 'tie-candidate'));
@@ -1317,6 +1405,15 @@ function endGameBecauseDeckIsEmpty() {
 function showVictory(winner) {
     audioManager.stopMusic();
     audioManager.playSound('victory');
+    
+    const myPlayer = players.find(p => p.id === MY_ID);
+    const replayBtn = document.querySelector('#victory-overlay .btn-primary');
+    if (myPlayer && myPlayer.isSpectator) {
+        replayBtn.innerText = "Rejoindre";
+    } else {
+        replayBtn.innerText = "Rejouer";
+    }
+
     document.getElementById('victory-title').innerHTML = `👑 ${winner.name} ${winner.avatar}`;
     document.getElementById('victory-message').innerHTML = `<strong>${winner.name}</strong> remporte la partie avec ${winner.score} points !`;
     renderRivalrySummary();
