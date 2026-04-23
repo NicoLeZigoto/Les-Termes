@@ -96,6 +96,11 @@ let cemetery = [];
 let voteStats = { againstMe: {}, byMe: {} };
 let isVoting = false;
 
+// File d'attente pour séquencer proprement les animations ---
+let cinematicQueue = Promise.resolve();
+function enqueueAnimation(fn) {
+    cinematicQueue = cinematicQueue.then(fn).catch(err => console.error(err));
+}
 // Timer local (cosmétique uniquement — la vraie source est le serveur)
 let localTimer = 0;
 let localTimerInterval = null;
@@ -468,17 +473,20 @@ socket.on('vote_registered', (data) => {
 // RÉSOLUTION — Résultats envoyés par le serveur
 // =========================================================
 
-socket.on('afk_players', async (data) => {
-    // Animer les AFK (humiliation, mutilation, exécution)
-    for (const afkInfo of data.afkPlayers) {
-        const player = players.find(p => p.id === afkInfo.id);
-        if (!player) continue;
-        player.afkCount = afkInfo.afkCount;
-        await playCinematic(player);
-    }
+socket.on('afk_players', (data) => {
+    // Séquence l'animation AFK dans la file d'attente
+    enqueueAnimation(async () => {
+        for (const afkInfo of data.afkPlayers) {
+            const player = players.find(p => p.id === afkInfo.id);
+            if (!player) continue;
+            player.afkCount = afkInfo.afkCount;
+            await playCinematic(player);
+        }
+    });
 });
 
-socket.on('round_result', async (data) => {
+socket.on('round_result', (data) => {
+    // On met à jour l'UI instantanément pour stopper les sons et cacher les chronos
     audioManager.stopSound('heartbeat');
     isVoting = false;
     window._myVoteValidated = false;
@@ -487,103 +495,130 @@ socket.on('round_result', async (data) => {
     document.getElementById('timer-display').classList.add('hidden');
     document.getElementById('btn-validate').classList.add('hidden');
 
-    players = data.players;
+    // On séquence le résultat APRES la fin des éventuelles animations AFK
+    enqueueAnimation(async () => {
+        players = data.players;
 
-    // Affichage des pointeurs (mode semi)
-    if (GAME_VOTE_MODE === 'semi') {
-        Object.entries(data.votes).forEach(([targetId, voterIds]) => {
-            voterIds.forEach(voterId => showPointerVisual(voterId, targetId));
-        });
-    }
-
-    if (data.type === 'loser') {
-        const loser = players.find(p => p.id === data.loserId);
-        const voterIds = data.votes[data.loserId] || [];
-        const voterNames = voterIds.map(id => players.find(p => p.id === id)?.name).filter(Boolean);
-        const votersText = voterNames.length <= 1
-            ? (voterNames[0] || '?')
-            : voterNames.slice(0, -1).join(', ') + ' et ' + voterNames[voterNames.length - 1];
-        const survivors = players.filter(p => !p.isDead);
-        const isUnanimous = voterIds.length === survivors.length - 1 && survivors.length > 2;
-
-        let recapMessage = "";
-        const randomComment = currentCard.comments
-            ? currentCard.comments[Math.floor(Math.random() * currentCard.comments.length)]
-            : "";
-        const punchline = randomComment?.replace(/\$pseudo/g, `<strong style="color:#e74c3c;">${loser?.name}</strong>`);
-
-        if (GAME_VOTE_MODE === 'anonyme') {
-            const countText = voterIds.length > 1 ? `${voterIds.length} personnes ont` : `1 personne a`;
-            recapMessage = isUnanimous
-                ? `<strong>UNANIMITÉ !</strong> Tout le monde a voté (en lâche) contre <strong style="color:#e74c3c;">${loser?.name}</strong>.<br><br><em>💬 "${punchline}"</em>`
-                : `<strong>${countText}</strong> voté en secret contre <strong style="color:#e74c3c;">${loser?.name}</strong>.`;
-        } else {
-            recapMessage = isUnanimous
-                ? `<strong>UNANIMITÉ !</strong> Tout le monde désigne <strong style="color:#e74c3c;">${loser?.name}</strong>.<br><br><em>💬 "${punchline}"</em>`
-                : `<strong>${votersText}</strong> ${voterNames.length > 1 ? 'ont' : 'a'} voté contre <strong style="color:#e74c3c;">${loser?.name}</strong>.`;
+        if (GAME_VOTE_MODE === 'semi') {
+            Object.entries(data.votes).forEach(([targetId, voterIds]) => {
+                voterIds.forEach(voterId => showPointerVisual(voterId, targetId));
+            });
         }
 
-        const recapEl = document.getElementById('recap-display');
-        recapEl.innerHTML = recapMessage;
-        recapEl.classList.remove('hidden');
+        if (data.type === 'loser') {
+            const loser = players.find(p => p.id === data.loserId);
+            const voterIds = data.votes[data.loserId] ||[];
+            const voterNames = voterIds.map(id => players.find(p => p.id === id)?.name).filter(Boolean);
+            const votersText = voterNames.length <= 1
+                ? (voterNames[0] || '?')
+                : voterNames.slice(0, -1).join(', ') + ' et ' + voterNames[voterNames.length - 1];
+            const survivors = players.filter(p => !p.isDead);
+            const isUnanimous = voterIds.length === survivors.length - 1 && survivors.length > 2;
 
-        setTimeout(() => {
-            updatePlayerStack(loser, true);
-            renderPlayers();
-            playHandoverAnimation(currentReaderId, data.loserId, () => {
-                currentReaderId = data.newReaderId;
-                renderPlayers();
+            let recapMessage = "";
+            const randomComment = currentCard.comments
+                ? currentCard.comments[Math.floor(Math.random() * currentCard.comments.length)]
+                : "";
+            const punchline = randomComment?.replace(/\$pseudo/g, `<strong style="color:#e74c3c;">${loser?.name}</strong>`);
+
+            if (GAME_VOTE_MODE === 'anonyme') {
+                const countText = voterIds.length > 1 ? `${voterIds.length} personnes ont` : `1 personne a`;
+                recapMessage = isUnanimous
+                    ? `<strong>UNANIMITÉ !</strong> Tout le monde a voté (en lâche) contre <strong style="color:#e74c3c;">${loser?.name}</strong>.<br><br><em>💬 "${punchline}"</em>`
+                    : `<strong>${countText}</strong> voté en secret contre <strong style="color:#e74c3c;">${loser?.name}</strong>.`;
+            } else {
+                recapMessage = isUnanimous
+                    ? `<strong>UNANIMITÉ !</strong> Tout le monde désigne <strong style="color:#e74c3c;">${loser?.name}</strong>.<br><br><em>💬 "${punchline}"</em>`
+                    : `<strong>${votersText}</strong> ${voterNames.length > 1 ? 'ont' : 'a'} voté contre <strong style="color:#e74c3c;">${loser?.name}</strong>.`;
+            }
+
+            const recapEl = document.getElementById('recap-display');
+            recapEl.innerHTML = recapMessage;
+            recapEl.classList.remove('hidden');
+
+            // On attend que l'animation de transfert soit terminée avant de libérer la file d'attente
+            await new Promise(resolve => {
+                setTimeout(() => {
+                    updatePlayerStack(loser, true);
+                    renderPlayers();
+                    playHandoverAnimation(currentReaderId, data.loserId, () => {
+                        currentReaderId = data.newReaderId;
+                        renderPlayers();
+                        resolve();
+                    });
+                }, 1000);
             });
-        }, 1000);
-    }
+        }
+    });
 });
 
 socket.on('no_votes', () => {
     isVoting = false;
     window._myVoteValidated = false;
     document.getElementById('timer-display').classList.add('hidden');
-    showNotification("🤷 Personne n'a voté !");
+    document.body.classList.remove('urgent-flash');
+    enqueueAnimation(async () => {
+        showNotification("🤷 Personne n'a voté !");
+        await sleep(2000);
+    });
 });
 
 socket.on('all_targets_dead', () => {
-    showNotification("💀 Tous les joueurs ciblés sont morts ! La carte est détruite.");
+    enqueueAnimation(async () => {
+        showNotification("💀 Tous les joueurs ciblés sont morts ! La carte est détruite.");
+        await sleep(2000);
+    });
 });
 
 socket.on('general_tie', () => {
-    showNotification("⚖️ Égalité générale ! La carte est détruite.");
+    enqueueAnimation(async () => {
+        showNotification("⚖️ Égalité générale ! La carte est détruite.");
+        await sleep(2000);
+    });
 });
 
-socket.on('tie_break_start', async (data) => {
+socket.on('tie_break_start', (data) => {
+    audioManager.stopSound('heartbeat');
     isVoting = false;
     window._myVoteValidated = false;
     document.getElementById('timer-display').classList.add('hidden');
-    await triggerTieAnimation(data.tiedPlayerIds);
-    // Le vote tie-break est lancé par vote_phase_start qui arrive après
+    document.body.classList.remove('urgent-flash');
+    enqueueAnimation(async () => {
+        await triggerTieAnimation(data.tiedPlayerIds);
+    });
 });
 
 socket.on('card_burned', (data) => {
-    cemetery.push(data.card);
-    document.getElementById('cemetery-count').innerText = data.cemCount;
-    renderCemetery();
-    burnCardAnimation(data.card);
+    enqueueAnimation(async () => {
+        cemetery.push(data.card);
+        document.getElementById('cemetery-count').innerText = data.cemCount;
+        renderCemetery();
+        await burnCardAnimation(data.card);
+    });
 });
 
 socket.on('next_round', (data) => {
-    players = data.players;
-    currentReaderId = data.currentReaderId;
-    renderPlayers();
-    resetForNextRound();
+    enqueueAnimation(async () => {
+        players = data.players;
+        currentReaderId = data.currentReaderId;
+        renderPlayers();
+        resetForNextRound();
+    });
 });
 
 socket.on('game_over', (data) => {
-    players = data.players;
-    const winner = players.find(p => p.id === data.winnerId);
-    if (winner) showVictory(winner);
+    enqueueAnimation(async () => {
+        players = data.players;
+        const winner = players.find(p => p.id === data.winnerId);
+        if (winner) showVictory(winner);
+    });
 });
 
 socket.on('deck_empty', (data) => {
-    players = data.players;
-    endGameBecauseDeckIsEmpty();
+    enqueueAnimation(async () => {
+        players = data.players;
+        endGameBecauseDeckIsEmpty();
+    });
 });
 
 socket.on('player_disconnected', (data) => {
@@ -614,6 +649,7 @@ function prepareNextTurn() {
     document.getElementById('btn-validate').classList.add('hidden');
     document.getElementById('timer-display').classList.add('hidden');
     document.getElementById('not-reader-text').classList.add('hidden');
+    isVoting = false; 
     window._myVoteValidated = false;
     window._pendingVoteTarget = null;
     window._tieBreakCandidates = null;
