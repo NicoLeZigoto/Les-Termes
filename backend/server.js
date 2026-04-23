@@ -358,7 +358,7 @@ io.on('connection', (socket) => {
         const room = rooms[roomCode];
         if (!room) return;
         if (room.currentReaderId !== socket.id) return; // Seul le lecteur peut piocher
-        if (room.phase !== 'drawing') return;
+        if (room.phase === 'voting' || room.phase === 'resolving' || room.phase === 'reading') return; // Pas pendant un vote
         if (room.deck.length < 3) {
             io.to(roomCode).emit('deck_empty', { players: room.players });
             return;
@@ -447,8 +447,8 @@ io.on('connection', (socket) => {
             if (playerIndex === -1) continue;
 
             const player = room.players[playerIndex];
-            player.isDead = true; // On marque mort plutôt que retirer (pour le scoring)
-            player.disconnected = true;
+            player.isDead = true;       // Compte comme mort pour les votes/résolutions
+            player.disconnected = true; // Flag visuel pour griser l'avatar
 
             io.to(roomCode).emit('player_disconnected', {
                 playerId: socket.id,
