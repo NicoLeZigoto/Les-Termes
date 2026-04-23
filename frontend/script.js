@@ -209,20 +209,26 @@ socket.on('room_created', (data) => {
     GAME_VOTE_MODE = data.voteMode;
     enterGame();
 });
-
+// ====== APRÈS ======
 socket.on('room_joined', (data) => {
     currentRoomCode = data.roomCode;
     players = data.players;
     currentReaderId = data.currentReaderId;
     SCORE_TO_WIN = data.scoreToWin;
     GAME_VOTE_MODE = data.voteMode;
-    enterGame();
+    
+    if (data.phase && data.phase !== 'lobby') {
+        currentCard = data.currentCard;
+        isVoting = data.isVoting;
+    }
+    
+    enterGame(data.phase);
 });
 
 socket.on('player_joined', (data) => {
     players = data.players;
     renderPlayers();
-    showNotification(`${data.newPlayer.avatar} ${data.newPlayer.name} a rejoint la partie !`);
+    showNotification(`${data.newPlayer.avatar} ${data.newPlayer.name} a rejoint la partie ${data.newPlayer.isSpectator ? 'comme spectateur ! 👀' : '!'}`);
 });
 
 socket.on('update_players', (serverPlayers) => {
@@ -234,7 +240,7 @@ socket.on('update_players', (serverPlayers) => {
 
 socket.on('error_msg', (msg) => showNotification(msg));
 
-function enterGame() {
+function enterGame(phase = 'lobby') {
     audioManager.stopMusic();
     audioManager.playMusic('game', { volume: 0.02 });
     document.getElementById('lobby-screen').classList.add('hidden');
@@ -247,13 +253,24 @@ function enterGame() {
     initRoomBadgeShare();
     setTimeout(() => {
         renderPlayers();
-        prepareNextTurn();
+        
+        const myPlayer = players.find(p => p.id === MY_ID);
+        if (myPlayer && myPlayer.isSpectator) {
+            showNotification("👀 Tu as rejoint la partie en cours en tant que spectateur !");
+        }
+        
+        if (phase === 'lobby' || phase === 'drawing' || !currentCard) {
+            prepareNextTurn();
+        } else {
+            proceedWithChosenCard();
+        }
     }, 50);
 }
 
 // =========================================================
 // DÉMARRAGE DE PARTIE (bouton dans le lobby)
 // =========================================================
+
 
 let isGameStarting = false; 
 
@@ -275,6 +292,33 @@ socket.on('game_started', (data) => {
     prepareNextTurn();
 });
 
+function replayGame() {
+    audioManager.playSound('ui-click');
+    const deck = typeof cartesJSON !== 'undefined' ? [...cartesJSON] :[];
+    // On mélange le deck de façon propre pour la nouvelle manche
+    for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    socket.emit('replay_game', { roomCode: currentRoomCode, deck });
+}
+
+socket.on('game_restarted', (data) => {
+    players = data.players;
+    currentReaderId = data.currentReaderId;
+    cemetery =[];
+    currentCard = null;
+    isVoting = false;
+    window._myVoteValidated = false;
+    window._pendingVoteTarget = null;
+    
+    document.getElementById('cemetery-count').innerText = "0";
+    document.getElementById('cemetery-cards').innerHTML = "<p class='cemetery-empty'>Aucune carte brûlée pour l'instant...</p>";
+    document.getElementById('victory-overlay').classList.add('hidden');
+    
+    renderPlayers();
+    prepareNextTurn();
+});
 // =========================================================
 // TOUR DE JEU — PIOCHE
 // =========================================================
@@ -399,6 +443,7 @@ function startVoteTimer() {
     socket.emit('start_vote', currentRoomCode);
 }
 
+// Le serveur démarre le vote pour tout le monde// Le serveur démarre le vote pour tout le monde// ====== APRÈS ======
 // Le serveur démarre le vote pour tout le monde// Le serveur démarre le vote pour tout le monde
 socket.on('vote_phase_start', (data) => {
     const { duration, isTieBreak, tieBreakCandidates, tieBreakExcluded } = data;
@@ -447,7 +492,9 @@ socket.on('vote_phase_start', (data) => {
         }
     } else {
         const myPlayer = players.find(p => p.id === MY_ID);
-        if (myPlayer && myPlayer.isDead) {
+        if (myPlayer && myPlayer.isSpectator) {
+            notReaderText.innerHTML = "👀 Tu es spectateur... observe les joueurs s'entretuer.";
+        } else if (myPlayer && myPlayer.isDead) {
             notReaderText.innerHTML = "👻 Tu es mort... regarde les vivants s'entretuer.";
         } else {
             notReaderText.innerHTML = "À toi de voter !";
@@ -471,7 +518,7 @@ socket.on('timer_tick', (data) => {
             }
             const myPlayer = players.find(p => p.id === MY_ID);
             const amExcluded = window._tieBreakExcluded && window._tieBreakExcluded.includes(MY_ID);
-            if (!window._myVoteValidated && !(myPlayer && myPlayer.isDead) && !amExcluded) {
+            if (!window._myVoteValidated && !(myPlayer && (myPlayer.isDead || myPlayer.isSpectator)) && !amExcluded) {
                 document.body.classList.add('urgent-flash');
             }
         } else {
@@ -496,9 +543,11 @@ socket.on('pointer_update', (data) => {
 function handleVoteClick(targetId) {
     if (!isVoting) return;
     const myPlayer = players.find(p => p.id === MY_ID);
+    if (myPlayer && myPlayer.isSpectator) return showNotification("👀 Tu es spectateur, tu ne peux pas voter !");
     if (myPlayer && myPlayer.isDead) return showNotification("👻 Tu es mort ! Les fantômes ne votent pas.");
     if (targetId === MY_ID) return showNotification("⛔ Pas le droit de voter pour toi !");
     const targetPlayer = players.find(p => p.id === targetId);
+    if (!targetPlayer || targetPlayer.isSpectator) return showNotification("👀 C'est un spectateur, laisse-le tranquille !");
     if (!targetPlayer || targetPlayer.isDead) return showNotification("💀 On ne tire pas sur un cadavre.");
     if (window._myVoteValidated) return showNotification("🔒 Ton vote est déjà validé !");
 
@@ -841,9 +890,10 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
         }
 
         // Classes état
-        playerDiv.classList.remove('mutilated', 'executed');
+        playerDiv.classList.remove('mutilated', 'executed', 'spectator');
         if (p.afkCount >= 2 && !p.isDead) playerDiv.classList.add('mutilated');
         if (p.isDead || p.disconnected) playerDiv.classList.add('executed');
+        if (p.isSpectator) playerDiv.classList.add('spectator');
 
         // Pointeur mutilé
         const pointerEl = document.getElementById(`pointer-${p.id}`);
