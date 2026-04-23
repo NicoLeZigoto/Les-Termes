@@ -44,7 +44,7 @@ function broadcastPlayers(roomCode) {
     if (!room) return;
     io.to(roomCode).emit('update_players', room.players);
 }
-
+// ====== APRÈS ======
 function handlePlayerDeparture(socket, roomCode) {
     const room = rooms[roomCode];
     if (!room) return;
@@ -67,7 +67,7 @@ function handlePlayerDeparture(socket, roomCode) {
     // Si la partie continue, on gère la suite (passage de flambeau, etc.)
     if (room.currentReaderId === socket.id) {
         // ... (utilise la logique de passage de flambeau qu'on a codé au bug n°4)
-        const nextReader = room.players.find(p => !p.isDead && !p.disconnected);
+        const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
         if (nextReader) {
             room.currentReaderId = nextReader.id;
             io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
@@ -78,8 +78,9 @@ function handlePlayerDeparture(socket, roomCode) {
     io.to(roomCode).emit('update_players', room.players);
 }
 
+// ====== APRÈS ======
 function getAlivePlayers(room) {
-    return room.players.filter(p => !p.isDead);
+    return room.players.filter(p => !p.isDead && !p.isSpectator);
 }
 
 function pickRandomCards(deck, count) {
@@ -111,7 +112,7 @@ function clearTimer(room) {
 // =========================================================
 // RÉSOLUTION D'UN TOUR (appelée par le serveur uniquement)
 // =========================================================
-
+// ====== APRÈS ======
 function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     const room = rooms[roomCode];
     if (!room) return;
@@ -123,6 +124,7 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     const excluded = (isTieBreak && room.tieBreakExcluded) ? room.tieBreakExcluded :[];
     const afkPlayers = room.players.filter(p =>
         !p.isDead &&
+        !p.isSpectator &&
         !excluded.includes(p.id) &&
         !room.votes[p.id]
     );
@@ -145,7 +147,7 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
             afkPlayers: afkPlayers.map(p => ({ id: p.id, afkCount: p.afkCount, isDead: p.isDead })) 
         });
 
-        const aliveAfterAfk = room.players.filter(p => !p.isDead && !p.disconnected);
+        const aliveAfterAfk = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
     
         if (aliveAfterAfk.length <= 2) {
             // Le seuil critique est atteint, on force la fin de partie !
@@ -197,7 +199,7 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     }
 
     let maxVotes = 0;
-    let losers = [];
+    let losers =[];
     for (const [id, count] of Object.entries(voteCounts)) {
         if (count > maxVotes) { maxVotes = count; losers = [id]; }
         else if (count === maxVotes) { losers.push(id); }
@@ -262,7 +264,7 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
             io.to(roomCode).emit('tie_break_start', { tiedPlayerIds: aliveLosers, votes: votesByTarget });
             room.tieBreakCandidates = aliveLosers;
             const isTwoWayTie = aliveLosers.length === 2;
-            room.tieBreakExcluded = isTwoWayTie ? aliveLosers : [];
+            room.tieBreakExcluded = isTwoWayTie ? aliveLosers :[];
 
             setTimeout(() => {
                 startVotePhase(roomCode, true, aliveLosers);
@@ -308,6 +310,7 @@ function scheduleNextRound(roomCode, delay) {
 // PHASE DE VOTE (démarrée par le serveur)
 // =========================================================
 
+// ====== APRÈS ======
 function startVotePhase(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     const room = rooms[roomCode];
     if (!room) return;
@@ -323,7 +326,7 @@ function startVotePhase(roomCode, isTieBreak = false, tieBreakCandidates = []) {
         duration: VOTE_DURATION,
         isTieBreak,
         tieBreakCandidates,
-        tieBreakExcluded: room.tieBreakExcluded || []
+        tieBreakExcluded: room.tieBreakExcluded ||[]
     });
 
     // Tick toutes les secondes pour synchronisation
@@ -333,9 +336,9 @@ function startVotePhase(roomCode, isTieBreak = false, tieBreakCandidates = []) {
 
         // Fast-forward : si tout le monde a voté
         // 🛡️ CORRECTION : On n'ignore des joueurs QUE si on est VRAIMENT en Tie-Break
-        const excluded = isTieBreak ? (room.tieBreakExcluded || []) : [];
+        const excluded = isTieBreak ? (room.tieBreakExcluded || []) :[];
         
-        const eligibleCount = room.players.filter(p => !p.isDead && !excluded.includes(p.id)).length;
+        const eligibleCount = room.players.filter(p => !p.isDead && !p.isSpectator && !excluded.includes(p.id)).length;
         const votedCount = Object.keys(room.votes).filter(id => !excluded.includes(id)).length;
 
         if (votedCount >= eligibleCount && remaining > 5) {
@@ -401,35 +404,41 @@ io.on('connection', (socket) => {
         console.log(`🏠 Room ${roomCode} créée par ${socket.id}`);
     });
 
-    socket.on('join_room', (data) => {
-        const { roomCode, playerData } = data;
-        const room = rooms[roomCode];
-        if (!room) {
-            return socket.emit('error_msg', "Room introuvable !");
-        }
-        if (room.phase !== 'lobby') {
-            return socket.emit('error_msg', "La partie a déjà commencé !");
-        }
+// ====== APRÈS ======
+socket.on('join_room', (data) => {
+    const { roomCode, playerData } = data;
+    const room = rooms[roomCode];
+    if (!room) {
+        return socket.emit('error_msg', "Room introuvable !");
+    }
+    
+    let isSpectator = false;
+    if (room.phase !== 'lobby') {
+        isSpectator = true;
+    }
 
-        const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, wonCards: [] };
-        room.players.push(newPlayer);
-        socket.join(roomCode);
+    const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: isSpectator, wonCards:[] };
+    room.players.push(newPlayer);
+    socket.join(roomCode);
 
-        // Confirmer au nouveau joueur
-        socket.emit('room_joined', {
-            roomCode,
-            players: room.players,
-            currentReaderId: room.currentReaderId,
-            voteMode: room.voteMode,
-            scoreToWin: room.scoreToWin
-        });
-
-        // Prévenir les autres
-        socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
-        console.log(`👤 ${socket.id} a rejoint la room ${roomCode}`);
+    // Confirmer au nouveau joueur
+    socket.emit('room_joined', {
+        roomCode,
+        players: room.players,
+        currentReaderId: room.currentReaderId,
+        voteMode: room.voteMode,
+        scoreToWin: room.scoreToWin,
+        phase: room.phase,
+        currentCard: room.currentCard,
+        isVoting: room.isVoting
     });
 
-    // ------ DÉMARRAGE DE PARTIE ------
+    // Prévenir les autres
+    socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
+    console.log(`👤 ${socket.id} a rejoint la room ${roomCode} ${isSpectator ? '(Spectateur)' : ''}`);
+});
+
+    // ------ DÉMARRAGE DE PARTIE ET REJOUER ------
 
     socket.on('start_game', (roomCode) => {
         const room = rooms[roomCode];
@@ -449,6 +458,33 @@ io.on('connection', (socket) => {
             players: room.players
         });
         console.log(`🎮 Partie démarrée dans la room ${roomCode}`);
+    });
+
+    socket.on('replay_game', (data) => {
+        const { roomCode, deck } = data;
+        const room = rooms[roomCode];
+        if (!room) return;
+        
+        room.phase = 'drawing';
+        room.deck = deck ? [...deck] : [];
+        room.cemetery =[];
+        room.currentCard = null;
+        room.votes = {};
+        room.isVoting = false;
+        room.tieBreakCandidates =[];
+        room.tieBreakExcluded =[];
+        clearTimer(room);
+
+        room.players.forEach(p => {
+            p.score = 0;
+            p.afkCount = 0;
+            p.isDead = false;
+            p.isSpectator = false; // Les spectateurs deviennent des joueurs officiels !
+            p.wonCards =[];
+        });
+
+        io.to(roomCode).emit('game_restarted', { players: room.players, currentReaderId: room.currentReaderId });
+        console.log(`🔄 Partie relancée dans la room ${roomCode}`);
     });
 
     // ------ PIOCHE ------
@@ -511,7 +547,7 @@ io.on('connection', (socket) => {
         startVotePhase(roomCode);
     });
 
-
+// ====== APRÈS ======
     // ------ POINTEUR EN TEMPS RÉEL (MODE TRANSPARENT) ------
     socket.on('point_target', (data) => {
         const { roomCode, targetId } = data;
@@ -520,7 +556,7 @@ io.on('connection', (socket) => {
         if (!room || room.phase !== 'voting' || room.voteMode !== 'transparent') return;
 
         const voter = room.players.find(p => p.id === socket.id);
-        if (!voter || voter.isDead) return; 
+        if (!voter || voter.isDead || voter.isSpectator) return; 
         if (room.votes[socket.id]) return; 
 
         socket.to(roomCode).emit('pointer_update', { voterId: socket.id, targetId });
@@ -535,12 +571,12 @@ socket.on('cast_vote', (data) => {
     if (!room || room.phase !== 'voting') return;
 
     const voter = room.players.find(p => p.id === socket.id);
-    if (!voter || voter.isDead) return;
+    if (!voter || voter.isDead || voter.isSpectator) return;
     if (socket.id === targetId) return;
     if (room.votes[socket.id]) return; 
 
     const targetPlayer = room.players.find(p => p.id === targetId);
-    if (!targetPlayer || targetPlayer.isDead || targetPlayer.disconnected) {
+    if (!targetPlayer || targetPlayer.isDead || targetPlayer.disconnected || targetPlayer.isSpectator) {
         return; 
     }
 
@@ -597,7 +633,7 @@ socket.on('cast_vote', (data) => {
                 playerName: player.name,
                 players: room.players
             });
-
+// ====== APRÈS ======
             // Si c'était le lecteur, passer le flambeau
             if (room.currentReaderId === socket.id) {
                 const currentIndex = room.players.findIndex(p => p.id === socket.id);
@@ -606,7 +642,7 @@ socket.on('cast_vote', (data) => {
                 for (let i = 1; i < room.players.length; i++) {
                     const checkIndex = (currentIndex + i) % room.players.length;
                     const p = room.players[checkIndex];
-                    if (!p.isDead && !p.disconnected) {
+                    if (!p.isDead && !p.disconnected && !p.isSpectator) {
                         nextReader = p;
                         break;
                     }
@@ -629,7 +665,7 @@ socket.on('cast_vote', (data) => {
             }
 
 
-            const alive = room.players.filter(p => !p.isDead && !p.disconnected);
+            const alive = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
             
             if (alive.length <= 2 && room.phase !== 'lobby') {
                 clearTimer(room);
