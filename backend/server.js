@@ -512,37 +512,40 @@ io.on('connection', (socket) => {
 
     // ------ VOTE D'UN JOUEUR ------
 
-    socket.on('cast_vote', (data) => {
-        const { roomCode, targetId } = data;
-        const room = rooms[roomCode];
-        
-        if (!room || room.phase !== 'voting') return;
+socket.on('cast_vote', (data) => {
+    const { roomCode, targetId } = data;
+    const room = rooms[roomCode];
+    
+    if (!room || room.phase !== 'voting') return;
 
-        const voter = room.players.find(p => p.id === socket.id);
-        if (!voter || voter.isDead) return;
-        if (socket.id === targetId) return;
-        if (room.votes[socket.id]) return; 
+    const voter = room.players.find(p => p.id === socket.id);
+    if (!voter || voter.isDead) return;
+    if (socket.id === targetId) return;
+    if (room.votes[socket.id]) return; 
 
-        const targetPlayer = room.players.find(p => p.id === targetId);
-        if (!targetPlayer || targetPlayer.isDead || targetPlayer.disconnected) {
-            return; 
-        }
+    const targetPlayer = room.players.find(p => p.id === targetId);
+    if (!targetPlayer || targetPlayer.isDead || targetPlayer.disconnected) {
+        return; 
+    }
 
-        if (room.tieBreakCandidates && room.tieBreakCandidates.length > 0) {
-            if (room.tieBreakExcluded && room.tieBreakExcluded.includes(socket.id)) return;
-            if (!room.tieBreakCandidates.includes(targetId)) return;
-        }
+    if (room.tieBreakCandidates && room.tieBreakCandidates.length > 0) {
+        if (room.tieBreakExcluded && room.tieBreakExcluded.includes(socket.id)) return;
+        if (!room.tieBreakCandidates.includes(targetId)) return;
+    }
 
-        room.votes[socket.id] = targetId;
+    room.votes[socket.id] = targetId;
 
-        if (room.voteMode === 'transparent') {
-            io.to(roomCode).emit('pointer_update', { voterId: socket.id, targetId });
-        }
+    if (room.voteMode === 'transparent') {
+        io.to(roomCode).emit('pointer_update', { voterId: socket.id, targetId });
+    }
 
-        socket.emit('vote_registered', { targetId });
+    socket.emit('vote_registered', { targetId });
+    
+    // NOUVEAU : On prévient toute la room que ce joueur a verrouillé son vote
+    io.to(roomCode).emit('player_validated', { voterId: socket.id });
 
-        console.log(`🗳️  Vote de ${socket.id} → ${targetId} dans ${roomCode}`);
-    });
+    console.log(`🗳️  Vote de ${socket.id} → ${targetId} dans ${roomCode}`);
+});
 
     // ------ DÉCONNEXION ------
 
