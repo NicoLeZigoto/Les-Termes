@@ -448,6 +448,14 @@ socket.on('join_room', (data) => {
     room.players.push(newPlayer);
     socket.join(roomCode);
 
+    // Si la room n'a plus de chef valide (ex: tous passés spectateurs), le nouveau joueur devient chef
+    const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
+    if (!currentReaderValid && room.phase === 'lobby') {
+        room.currentReaderId = socket.id;
+        newPlayer.isSpectator = false; // Le nouveau chef est automatiquement joueur
+        console.log(`👑 ${newPlayer.name} devient automatiquement chef de la room ${roomCode}`);
+    }
+
     socket.emit('room_joined', {
         roomCode,
         roomName: room.roomName,
@@ -461,6 +469,8 @@ socket.on('join_room', (data) => {
     });
 
     socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
+    // Notifier la room du nouveau currentReaderId si changement
+    socket.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
     console.log(`👤 ${newPlayer.name} (${socket.id}) a rejoint la room ${roomCode} en tant que spectateur. Total joueurs: ${room.players.length}`);
 });
 
@@ -500,9 +510,21 @@ socket.on('toggle_role', (roomCode) => {
 
     socket.on('start_game', (roomCode) => {
         const room = rooms[roomCode];
-        if (!room || room.currentReaderId !== socket.id) return;
+        if (!room) return;
         if (room.phase !== 'lobby') return;
-        
+
+        // Si currentReaderId est null ou invalide, on le réassigne au premier joueur actif
+        const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
+        if (!currentReaderValid) {
+            const firstActive = room.players.find(p => !p.isSpectator && !p.isDead);
+            if (firstActive) {
+                room.currentReaderId = firstActive.id;
+            }
+        }
+
+        // Seul le chef (currentReaderId) peut démarrer
+        if (room.currentReaderId !== socket.id) return;
+
         const activePlayers = room.players.filter(p => !p.isSpectator);
         if (activePlayers.length < 3) {
             return socket.emit('error_msg', "Il faut au moins 3 joueurs actifs pour démarrer !");
