@@ -13,6 +13,8 @@ const cartesJSON =[
     { category: "TRASH", text: "Qui est le plus lâche face au danger ?", comments: ["Au moins il arrivera rien de grave à $pseudo."] },
     { category: "TRASH", text: "Qui a l'air le plus con sur ses photos ?", comments:["Même Google a refusé de catégoriser $pseudo dans 'humains'"] },
     { category: "TRASH", text: "Qui ferait le pire président ?", comments:["Kim Jong-Un fait moins peur que $pseudo avec du pouvoir"] },
+    { category: "TRASH", text: "Qui aurait grandement besoin d'une muselière au vu des atrocités qui sortent de sa bouche au quotidien ?", comments:["Un jour tes mots vont te rattraper $pseudo. Et on verra si tu cours vite..."] },
+
 
     // ==========================================
     // SOIREE
@@ -149,3 +151,5 @@ const cartesJSON =[
     { category: "BOULOT", text: "Qui enverrait un mail à son boss bourré ?", comments:["Objet : 'AUGMENTATION OU JE ME CASSE'. Envoyé à 2h37, Regretté à 8h00", "Et c'est une fin de carrière pour $pseudo"] }
 
 ];
+
+
