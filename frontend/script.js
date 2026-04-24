@@ -253,9 +253,17 @@ socket.on('player_joined', (data) => {
     showNotification(`${data.newPlayer.avatar} ${data.newPlayer.name} a rejoint la partie ${data.newPlayer.isSpectator ? 'comme spectateur ! 👀' : '!'}`);
 });
 
-socket.on('update_players', (serverPlayers) => {
+socket.on('update_players', (data) => {
+    // update_players peut être soit un tableau simple, soit un objet {players, currentReaderId}
+    const serverPlayers = Array.isArray(data) ? data : data.players;
+    const newReaderId = Array.isArray(data) ? null : data.currentReaderId;
+
     enqueueAnimation(async () => {
         players = serverPlayers;
+        // Mettre à jour currentReaderId si le serveur le fournit dans cet event
+        if (newReaderId != null) {
+            currentReaderId = newReaderId;
+        }
         renderPlayers();
         // En lobby, rafraîchir l'UI complète (bouton rôle + bouton chef)
         if (gamePhase === 'lobby') {
@@ -724,17 +732,23 @@ socket.on('round_result', (data) => {
             recapEl.classList.remove('hidden');
 
             // On attend que l'animation de transfert soit terminée avant de libérer la file d'attente
-            await new Promise(resolve => {
-                setTimeout(() => {
-                    updatePlayerStack(loser, true);
-                    renderPlayers();
-                    playHandoverAnimation(currentReaderId, data.loserId, () => {
-                        currentReaderId = data.newReaderId;
+            // Timeout de sécurité à 4s pour éviter tout blocage de la file d'animation
+            await Promise.race([
+                new Promise(resolve => {
+                    setTimeout(() => {
+                        updatePlayerStack(loser, true);
                         renderPlayers();
-                        resolve();
-                    });
-                }, 1000);
-            });
+                        playHandoverAnimation(currentReaderId, data.loserId, () => {
+                            currentReaderId = data.newReaderId;
+                            renderPlayers();
+                            resolve();
+                        });
+                    }, 1000);
+                }),
+                new Promise(resolve => setTimeout(resolve, 4000))
+            ]);
+            // S'assurer que currentReaderId est bien à jour même si le timeout de sécurité s'est déclenché
+            currentReaderId = data.newReaderId;
         }
     });
 });
@@ -794,10 +808,26 @@ socket.on('card_burned', (data) => {
 });
 
 socket.on('next_round', (data) => {
+    // Réinitialisation IMMÉDIATE des variables critiques — sans attendre la fin des animations
+    gamePhase = 'drawing';
+    isVoting = false;
+    currentCard = null;
+    currentReaderId = data.currentReaderId;
+    window._myVoteValidated = false;
+    window._pendingVoteTarget = null;
+    window._tieBreakCandidates = null;
+    window._tieBreakExcluded = [];
+    document.body.classList.remove('urgent-flash');
+    audioManager.stopSound('heartbeat');
+
+    // Les éléments de vote sont cachés immédiatement
+    document.getElementById('timer-display').classList.add('hidden');
+    document.getElementById('btn-validate').classList.add('hidden');
+    document.getElementById('not-reader-text').classList.add('hidden');
+
+    // La mise à jour visuelle complète passe par la file pour rester après les animations en cours
     enqueueAnimation(async () => {
-        gamePhase = 'drawing';
         players = data.players;
-        currentReaderId = data.currentReaderId;
         renderPlayers();
         resetForNextRound();
     });
