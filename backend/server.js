@@ -131,7 +131,8 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     room.isVoting = false;
     room.phase = 'resolving';
 
-    const excluded = (isTieBreak && room.tieBreakExcluded) ? room.tieBreakExcluded :[];
+    // 1. Gestion des joueurs AFK (ceux qui n'ont pas voté)
+    const excluded = (isTieBreak && room.tieBreakExcluded) ? room.tieBreakExcluded : [];
     const afkPlayers = room.players.filter(p =>
         !p.isDead &&
         !p.isSpectator &&
@@ -139,60 +140,35 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
         !room.votes[p.id]
     );
 
-    // -- NOUVEAU : On calcule un délai pour que le serveur attende la fin des cinématiques --
     let afkDelay = 0;
     if (afkPlayers.length > 0) {
-        afkDelay = afkPlayers.length * 5000; // 5 secondes par joueur AFK
+        afkDelay = afkPlayers.length * 5000; // Délai pour les animations d'humiliation/mort
         afkPlayers.forEach(p => { 
             p.afkCount = (p.afkCount || 0) + 1; 
-            
-            // 💀 L'ARBITRE TUE OFFICIELLEMENT LE JOUEUR
             if (p.afkCount >= 3) {
                 p.isDead = true;
             }
         });
         
         io.to(roomCode).emit('afk_players', {
-            // On envoie aussi la confirmation de décès au client
             afkPlayers: afkPlayers.map(p => ({ id: p.id, afkCount: p.afkCount, isDead: p.isDead })) 
         });
 
+        // Sécurité : si après les AFK il ne reste plus assez de joueurs
         const aliveAfterAfk = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
-    
         if (aliveAfterAfk.length <= 2) {
-            // Le seuil critique est atteint, on force la fin de partie !
             clearTimer(room);
             if (aliveAfterAfk.length > 0) {
                 const winner = aliveAfterAfk.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-                
-                // On attend que l'animation d'exécution se termine avant d'afficher l'écran de victoire
                 setTimeout(() => {
                     io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
                 }, afkDelay + 1000);
             }
-            return; // TRÈS IMPORTANT : On arrête la fonction ici, inutile de compter les votes.
+            return;
         }
     }
 
-    const survivors = getAlivePlayers(room); 
-    if (survivors.length < 3) {
-
-        setTimeout(() => {
-            let winner;
-            if (survivors.length > 0) {
-
-                winner = survivors.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-            } else {
-
-                winner = room.players[0]; 
-            }
-            
-            io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
-        }, afkDelay + 1000); 
-        
-        return;
-    }
-
+    // 2. Calcul des votes effectifs
     const voteCounts = {};
     const validTargets = isTieBreak ? tieBreakCandidates : null;
     Object.values(room.votes).forEach(targetId => {
@@ -202,14 +178,24 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
 
     const totalVotes = Object.values(voteCounts).reduce((a, b) => a + b, 0);
 
+    // --- CORRECTION : SI PERSONNE NE VOTE ---
     if (totalVotes === 0) {
         io.to(roomCode).emit('no_votes');
-        // On rajoute le délai AFK ici
-        return scheduleNextRound(roomCode, 2000 + afkDelay); 
+        
+        if (isTieBreak) {
+            // [NOUVEAU] Si c'est une égalité et que personne n'a voté pour départager :
+            // On laisse 2s pour voir le message "Personne n'a voté", puis on brûle la carte.
+            console.log(`🔥 Tie-break échoué (0 votes) dans la room ${roomCode}. Destruction de la carte.`);
+            return setTimeout(() => burnCard(roomCode), 2000 + afkDelay);
+        } else {
+            // Tour normal sans vote : on passe juste à la suite
+            return scheduleNextRound(roomCode, 2000 + afkDelay); 
+        }
     }
 
+    // 3. Détermination du ou des perdants
     let maxVotes = 0;
-    let losers =[];
+    let losers = [];
     for (const [id, count] of Object.entries(voteCounts)) {
         if (count > maxVotes) { maxVotes = count; losers = [id]; }
         else if (count === maxVotes) { losers.push(id); }
@@ -220,9 +206,9 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
         return p && !p.isDead;
     });
 
+    // Si tous les gens votés sont déjà morts entre temps (cas rare)
     if (aliveLosers.length === 0) {
         io.to(roomCode).emit('all_targets_dead');
-        // On retarde la destruction de carte de afkDelay
         setTimeout(() => burnCard(roomCode), afkDelay);
         return;
     }
@@ -233,13 +219,14 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
         votesByTarget[targetId].push(voterId);
     });
 
+    // 4. Résolution : Un seul perdant vs Égalité
     if (aliveLosers.length === 1) {
         const loserId = aliveLosers[0];
         const loser = room.players.find(p => p.id === loserId);
 
         loser.score++;
         loser.wonCards.push(room.currentCard);
-        room.currentReaderId = loserId;
+        room.currentReaderId = loserId; // Le perdant devient le nouveau lecteur
 
         io.to(roomCode).emit('round_result', {
             type: 'loser',
@@ -249,32 +236,33 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
             players: room.players
         });
 
+        // Check victoire
         if (loser.score >= room.scoreToWin) {
             return setTimeout(() => {
-                io.to(roomCode).emit('game_over', {
-                    winnerId: loserId,
-                    players: room.players
-                });
-            }, 7000 + afkDelay); // <-- On ajoute afkDelay
+                io.to(roomCode).emit('game_over', { winnerId: loserId, players: room.players });
+            }, 7000 + afkDelay); 
         }
 
-        scheduleNextRound(roomCode, 8000 + afkDelay); // <-- On ajoute afkDelay
+        scheduleNextRound(roomCode, 8000 + afkDelay); 
 
     } else if (aliveLosers.length >= getAlivePlayers(room).length && !isTieBreak) {
+        // Égalité générale (tout le monde a 1 vote par ex)
         io.to(roomCode).emit('general_tie');
-        setTimeout(() => burnCard(roomCode), afkDelay); // <-- On ajoute afkDelay
+        setTimeout(() => burnCard(roomCode), afkDelay); 
 
     } else {
+        // Égalité partielle -> Tie Break
         room.tieCount = (room.tieCount || 0) + 1; 
 
         if (room.tieCount > 1) {
+            // Si c'est déjà le 2ème tie-break de suite pour cette carte -> destruction
             io.to(roomCode).emit('general_tie');
             setTimeout(() => burnCard(roomCode), afkDelay);
         } else {
             io.to(roomCode).emit('tie_break_start', { tiedPlayerIds: aliveLosers, votes: votesByTarget });
             room.tieBreakCandidates = aliveLosers;
             const isTwoWayTie = aliveLosers.length === 2;
-            room.tieBreakExcluded = isTwoWayTie ? aliveLosers :[];
+            room.tieBreakExcluded = isTwoWayTie ? aliveLosers : [];
 
             setTimeout(() => {
                 startVotePhase(roomCode, true, aliveLosers);
@@ -286,8 +274,19 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
 function burnCard(roomCode) {
     const room = rooms[roomCode];
     if (!room) return;
-    room.cemetery.push(room.currentCard);
-    io.to(roomCode).emit('card_burned', { card: room.currentCard, cemCount: room.cemetery.length });
+
+    // Ajouter la carte au cimetière de la room
+    if (room.currentCard) {
+        room.cemetery.push(room.currentCard);
+    }
+
+    // Prévenir tout le monde pour déclencher l'animation visuelle de brûlure
+    io.to(roomCode).emit('card_burned', { 
+        card: room.currentCard, 
+        cemCount: room.cemetery.length 
+    });
+
+    // Passer au tour suivant après l'animation (5 secondes)
     scheduleNextRound(roomCode, 5000);
 }
 
