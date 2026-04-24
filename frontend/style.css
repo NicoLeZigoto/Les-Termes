@@ -824,11 +824,7 @@
          SPECTATEURS & MODAL
          ========================================================= */
          #spectators-container {
-            position: absolute; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 8px; 
-            z-index: 10;
+            position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 10;
         }
         .spectator-badge {
             background: rgba(26,42,58,0.8); border: 1px dashed #7a8fa8; border-radius: 8px; padding: 6px 12px; color: #a0b4c8; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-weight: bold;
@@ -839,13 +835,14 @@
         }
         .confirm-box { width: min(400px, 90vw); text-align: center; }
 
+
+        /* AVANT (ajouter à la fin) */
+
+/* APRÈS */
 .room-neon-title {
-    position: absolute;
-    left: 0;
-    width: 100%;
-    
     font-size: 3.5rem;
     color: #d42b2b;
+    margin: 0 0 20px;
     text-shadow:
         2px 2px 0 #0a1018,
         0 0 8px rgba(212,43,43,0.8),
