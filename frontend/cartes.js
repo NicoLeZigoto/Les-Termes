@@ -30,7 +30,11 @@ const cartesJSON =[
     { category: "QUOTIDIEN", text: "Qui passe 8 heures par jour sur TikTok ?", comments:["Brainroted."] },
     { category: "QUOTIDIEN", text: "Qui laisse traîner sa vaisselle pendant une semaine entière ?", comments:["Si tu laisse trainer assez longtemps elle va peut etre se faire toute seule."] },
     { category: "QUOTIDIEN", text: "Qui pourrait oublier de nourrir son enfant ?", comments:["Qui voudrait un enfant avec $pseudo même ?"] },
+<<<<<<< HEAD
     { category: "QUOTIDIEN", text: "Qui ne répond jamais aux messagesn ?", comments: ["$pseudo a pas ton temps. Il est busy ok ?"] },
+=======
+    { category: "QUOTIDIEN", text: "Qui ne répond jamais aux messages ?", comments: ["$pseudo a pas ton temps. Il est busy ok ?"] },
+>>>>>>> e8ba0b9 (push cli)
     { category: "QUOTIDIEN", text: "Qui s'énerve tout seul devant les jeux vidéo ?", comments:["T'es pas un Sayan, crier te rend pas plus fort $pseudo."] },
     { category: "QUOTIDIEN", text: "Qui ment sur la taille de ce qu'il mange quand il est 'au régime' ?", comments:["$pseudo ? Fit and fun ? J'en doute"] },
     { category: "EGO", text: "Qui s'aime beaucoup trop en regardant son reflet dans les vitrines ?", comments:["J'y crois pas comment j'suis beau !"] },
