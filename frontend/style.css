@@ -918,3 +918,87 @@
     font-weight: bold;
     text-shadow: 0 0 30px rgba(212, 43, 43, 0.6);
 }
+
+/* =========================================================
+   MENU VOLUME
+   ========================================================= */
+
+   #btn-volume-toggle {
+    position: fixed;
+    top: 14px;
+    right: 105px; /* S'aligne à gauche du picker de carte */
+    width: 60px;
+    height: 60px;
+    border: 2px solid #2e4060;
+    border-radius: 10px;
+    background: #1a2a3a;
+    color: #e8ddd0;
+    font-size: 1.8rem;
+    cursor: pointer;
+    z-index: 4500;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, background 0.2s, border-color 0.2s;
+}
+
+#btn-volume-toggle:hover {
+    background: #1e2d3d;
+    border-color: #d42b2b;
+    transform: translateY(-2px);
+}
+
+#volume-modal {
+    position: fixed; inset: 0; background: rgba(5,10,18,0.92); backdrop-filter: blur(8px); z-index: 10000; display: flex; align-items: center; justify-content: center;
+}
+.volume-box { width: min(400px, 90vw); }
+
+.volume-sliders { display: flex; flex-direction: column; gap: 20px; }
+
+/* Personnalisation des sliders (input range) */
+input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
+    margin-top: 10px;
+}
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #d42b2b;
+    cursor: pointer;
+    margin-top: -7px;
+    box-shadow: 0 0 10px rgba(212,43,43,0.5);
+    transition: transform 0.1s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    background: #0f1a26;
+    border: 1px solid #2e4060;
+    border-radius: 3px;
+}
+input[type=range]:focus { outline: none; }
+
+/* Pour Firefox */
+input[type=range]::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #d42b2b;
+    cursor: pointer;
+    border: none;
+}
+input[type=range]::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    background: #0f1a26;
+    border: 1px solid #2e4060;
+    border-radius: 3px;
+}

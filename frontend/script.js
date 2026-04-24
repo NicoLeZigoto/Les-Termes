@@ -1612,7 +1612,71 @@ function startIdentitySubtitleRotation() {
     identitySubtitleInterval = true;
 }
 
+// =========================================================
+// GESTION DU VOLUME
+// =========================================================
+
+const VOLUME_STORAGE_KEY = 'les-termes-volume';
+let gameVolumes = { global: 1, music: 1, sfx: 1 };
+
+function initVolume() {
+    const stored = localStorage.getItem(VOLUME_STORAGE_KEY);
+    if (stored) {
+        try { gameVolumes = JSON.parse(stored); } catch(e) {}
+    }
+    
+    // Mettre à jour l'UI
+    const volGlobal = document.getElementById('vol-global');
+    const volMusic = document.getElementById('vol-music');
+    const volSfx = document.getElementById('vol-sfx');
+
+    if(volGlobal) volGlobal.value = gameVolumes.global;
+    if(volMusic) volMusic.value = gameVolumes.music;
+    if(volSfx) volSfx.value = gameVolumes.sfx;
+
+    updateVolumeLabel('val-global', gameVolumes.global);
+    updateVolumeLabel('val-music', gameVolumes.music);
+    updateVolumeLabel('val-sfx', gameVolumes.sfx);
+
+    applyVolumes();
+
+    // Listeners pour mettre à jour en temps réel
+    if(volGlobal) volGlobal.addEventListener('input', (e) => { gameVolumes.global = parseFloat(e.target.value); updateVolumeLabel('val-global', gameVolumes.global); applyVolumes(); saveVolumes(); });
+    if(volMusic) volMusic.addEventListener('input', (e) => { gameVolumes.music = parseFloat(e.target.value); updateVolumeLabel('val-music', gameVolumes.music); applyVolumes(); saveVolumes(); });
+    if(volSfx) volSfx.addEventListener('input', (e) => { gameVolumes.sfx = parseFloat(e.target.value); updateVolumeLabel('val-sfx', gameVolumes.sfx); applyVolumes(); saveVolumes(); });
+}
+
+function updateVolumeLabel(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.innerText = Math.round(value * 100) + '%';
+}
+
+function applyVolumes() {
+    // Communique avec audio.js
+    if (typeof audioManager !== 'undefined') {
+        if (typeof audioManager.setGlobalVolume === 'function') audioManager.setGlobalVolume(gameVolumes.global);
+        if (typeof audioManager.setMusicVolume === 'function') audioManager.setMusicVolume(gameVolumes.music);
+        if (typeof audioManager.setSfxVolume === 'function') audioManager.setSfxVolume(gameVolumes.sfx);
+    }
+}
+
+function saveVolumes() {
+    localStorage.setItem(VOLUME_STORAGE_KEY, JSON.stringify(gameVolumes));
+}
+
+function openVolumeMenu() {
+    audioManager.playSound('ui-click');
+    document.getElementById('volume-modal').classList.remove('hidden');
+}
+
+function closeVolumeMenu() {
+    audioManager.playSound('ui-click');
+    document.getElementById('volume-modal').classList.add('hidden');
+}
+
+
 function initLobbyUI() {
+    initVolume(); // <--- À AJOUTER ICI
     audioManager.playMusic('lobby');
     startIdentitySubtitleRotation();
     initCardSkinPicker();

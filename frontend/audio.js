@@ -5,8 +5,37 @@ class AudioManager {
     constructor() {
         this.sounds = {};
         this.musicTrack = null;
+        this.currentMusicBaseVol = 1.0; // Garde en mémoire le volume de base de la musique en cours
         this.isMuted = false;
+
+        // 1. NOUVELLES VARIABLES DE VOLUME
+        this.globalVolume = 1.0;
+        this.musicVolume = 1.0;
+        this.sfxVolume = 1.0;
+
         console.log("AudioManager prêt ! 🔊");
+    }
+
+    // 2. NOUVELLES MÉTHODES POUR MODIFIER LE VOLUME (Appelées par script.js)
+    setGlobalVolume(v) {
+        this.globalVolume = v;
+        this.updateMusicVolume();
+    }
+
+    setMusicVolume(v) {
+        this.musicVolume = v;
+        this.updateMusicVolume();
+    }
+
+    setSfxVolume(v) {
+        this.sfxVolume = v;
+    }
+
+    // Met à jour le volume de la musique en direct (quand le slider bouge)
+    updateMusicVolume() {
+        if (this.musicTrack) {
+            this.musicTrack.volume = this.currentMusicBaseVol * this.globalVolume * this.musicVolume;
+        }
     }
 
     // Précharge un son pour une lecture instantanée plus tard
@@ -17,14 +46,18 @@ class AudioManager {
     }
 
     // Joue un effet sonore
-    playSound(name, options = { volume: 1.0, loop: false }) {
+    playSound(name, options = {}) {
         if (this.isMuted || !this.sounds[name]) return;
 
         const sound = this.sounds[name];
-        sound.volume = options.volume || 1.0;
+        // On récupère le volume de base (par défaut 1.0 s'il n'est pas précisé)
+        const baseVol = options.volume !== undefined ? options.volume : 1.0;
+        
+        // 3. APPLICATION DU VOLUME SFX (Base * Global * SFX)
+        sound.volume = baseVol * this.globalVolume * this.sfxVolume;
         sound.loop = options.loop || false;
         sound.currentTime = 0; // Rembobine si le son est déjà en cours
-        sound.play().catch(e => console.error(`Erreur audio [${name}]:`, e));
+        sound.play().catch(e => console.error(`Erreur audio[${name}]:`, e));
     }
 
     // Stoppe un effet sonore (utile pour les sons en boucle comme le coeur)
@@ -35,7 +68,7 @@ class AudioManager {
     }
 
     // Joue une musique de fond (gère l'arrêt de la précédente)
-    playMusic(name, options = { volume: 0.3, loop: true }) {
+    playMusic(name, options = {}) {
         if (this.isMuted || !this.sounds[name]) return;
 
         // Si une autre musique joue, on la stoppe en douceur
@@ -45,8 +78,13 @@ class AudioManager {
 
         this.musicTrack = this.sounds[name];
         this.musicTrack.name = name; // On stocke le nom pour la vérification
-        this.musicTrack.volume = options.volume || 0.3;
-        this.musicTrack.loop = options.loop || true;
+        
+        // On stocke le volume de base de la piste (par défaut 0.3)
+        this.currentMusicBaseVol = options.volume !== undefined ? options.volume : 0.3;
+        
+        // 4. APPLICATION DU VOLUME MUSIQUE (Base * Global * Musique)
+        this.musicTrack.volume = this.currentMusicBaseVol * this.globalVolume * this.musicVolume;
+        this.musicTrack.loop = options.loop !== undefined ? options.loop : true;
         this.musicTrack.play().catch(e => console.error(`Erreur musique [${name}]:`, e));
     }
 
@@ -65,7 +103,6 @@ const audioManager = new AudioManager();
 // =========================================================
 // ON PRÉCHARGE TOUS LES SONS DU JEU ICI
 // =========================================================
-// Tu devras remplacer les chemins par tes propres fichiers !
 
 // Musiques
 audioManager.loadSound('lobby', 'sounds/music-lobby.mp3');
