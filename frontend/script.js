@@ -145,7 +145,11 @@ let gamePhase = 'lobby';
 // File d'attente pour séquencer proprement les animations ---
 let cinematicQueue = Promise.resolve();
 function enqueueAnimation(fn) {
-    cinematicQueue = cinematicQueue.then(fn).catch(err => console.error(err));
+    cinematicQueue = cinematicQueue.then(() => {
+        // Timeout de sécurité : si l'animation ne se termine pas en 8s, on passe quand même
+        const timeout = new Promise(resolve => setTimeout(resolve, 8000));
+        return Promise.race([fn(), timeout]);
+    }).catch(err => console.error('cinematicQueue error:', err));
 }
 // Timer local (cosmétique uniquement — la vraie source est le serveur)
 let localTimer = 0;
@@ -901,7 +905,7 @@ function prepareNextTurn() {
     }
 
     const readerName = players.find(p => p.id === currentReaderId)?.name || '...';
-    document.getElementById('reader-name').innerText = readerName;
+    // reader-name est géré via le innerHTML de waiting-text — pas d'getElementById séparé
 
     // Affichage selon la phase
     if (inLobby) {
@@ -910,21 +914,25 @@ function prepareNextTurn() {
             document.getElementById('start-controls').classList.remove('hidden');
         } else {
             document.getElementById('start-controls').classList.add('hidden');
-            document.getElementById('waiting-text').classList.remove('hidden');
-            document.getElementById('waiting-text').innerText = "En attente du chef de room...";
+            const wt = document.getElementById('waiting-text');
+            wt.classList.remove('hidden');
+            wt.innerText = "En attente du chef de room...";
         }
     } else {
         document.getElementById('start-controls').classList.add('hidden');
-        document.getElementById('waiting-text').classList.remove('hidden');
-        document.getElementById('waiting-text').innerHTML = `C'est à <strong>${readerName}</strong> de piocher !`;
+        const wt = document.getElementById('waiting-text');
+        wt.classList.remove('hidden');
+        wt.innerHTML = `C'est à <strong>${readerName}</strong> de piocher !`;
     }
 
-    document.getElementById('current-card').classList.add('hidden');
-    document.getElementById('recap-display').classList.add('hidden');
-    document.getElementById('btn-start-vote').classList.add('hidden');
-    document.getElementById('btn-validate').classList.add('hidden');
-    document.getElementById('timer-display').classList.add('hidden');
-    document.getElementById('not-reader-text').classList.add('hidden');
+    // Null-safe hide helper pour éviter tout crash si un élément est absent du DOM
+    const safeHide = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
+    safeHide('current-card');
+    safeHide('recap-display');
+    safeHide('btn-start-vote');
+    safeHide('btn-validate');
+    safeHide('timer-display');
+    safeHide('not-reader-text');
     isVoting = false; 
     window._myVoteValidated = false;
     window._pendingVoteTarget = null;
