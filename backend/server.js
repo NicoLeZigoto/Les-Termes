@@ -49,43 +49,42 @@ function handlePlayerDeparture(socket, roomCode) {
     const room = rooms[roomCode];
     if (!room) return;
 
-    // On retire le joueur de la liste
     const playerIndex = room.players.findIndex(p => p.id === socket.id);
     if (playerIndex !== -1) {
-        const player = room.players[playerIndex];
         room.players.splice(playerIndex, 1);
-        console.log(`🏃 ${player.name} a quitté la room ${roomCode}`);
     }
 
-    // 🕐 PERSISTANCE : Si la room est vide, attendre 2 minutes avant de la détruire
+    // 1. [NOUVEAU] Sécurité Countdown : Si un mec quitte et qu'on est en train de lancer
+    const activePlayers = room.players.filter(p => !p.isSpectator);
+    if (room.countdownTimer && activePlayers.length < 3) {
+        clearTimeout(room.countdownTimer);
+        room.countdownTimer = null;
+        io.to(roomCode).emit('countdown_cancelled', { 
+            reason: "Un joueur a quitté la room, lancement annulé." 
+        });
+    }
+
+    // 2. [ORIGINAL] Room vide
     if (room.players.length === 0) {
-        console.log(`⏳ Room ${roomCode} vide — destruction dans 2 minutes.`);
         room._emptyTimer = setTimeout(() => {
             if (rooms[roomCode] && rooms[roomCode].players.length === 0) {
                 delete rooms[roomCode];
-                console.log(`🗑️ Room ${roomCode} détruite après 2 minutes vide.`);
             }
         }, 2 * 60 * 1000);
         return;
     }
 
-    // Si quelqu'un rejoint une room qui avait un timer de destruction, l'annuler
-    if (room._emptyTimer) {
-        clearTimeout(room._emptyTimer);
-        room._emptyTimer = null;
-    }
-
-    // Si la partie continue, on gère la suite (passage de flambeau, etc.)
+    // 3. [ORIGINAL] Passage de flambeau si le chef est parti
     if (room.currentReaderId === socket.id) {
-        // ... (utilise la logique de passage de flambeau qu'on a codé au bug n°4)
         const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
         if (nextReader) {
             room.currentReaderId = nextReader.id;
             io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
+        } else {
+            room.currentReaderId = null;
         }
     }
 
-    // On prévient les survivants
     io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
 }
 
@@ -484,42 +483,50 @@ socket.on('join_room', (data) => {
 // toggle_role : switch spectateur ↔ joueur (lobby uniquement, bidirectionnel)
 socket.on('toggle_role', (roomCode) => {
     const room = rooms[roomCode];
-    if (!room) return;
+    if (!room || room.phase !== 'lobby') return;
 
     const player = room.players.find(p => p.id === socket.id);
     if (!player) return;
 
+    const oldReaderId = room.currentReaderId;
+
+    // 1. [ORIGINAL] Switch de rôle
     player.isSpectator = !player.isSpectator;
 
-    // --- NOUVELLE LOGIQUE DE SÉCURITÉ ---
+    // 2. [NOUVEAU] Annulation du compte à rebours si besoin
     const activePlayers = room.players.filter(p => !p.isSpectator);
+    if (room.countdownTimer && activePlayers.length < 3) {
+        clearTimeout(room.countdownTimer);
+        room.countdownTimer = null;
+        io.to(roomCode).emit('countdown_cancelled', { 
+            reason: "Pas assez de joueurs actifs pour lancer la partie." 
+        });
+    }
 
-    if (activePlayers.length === 0) {
-        // Si plus personne ne joue, on force le retour au lobby pur
-        room.phase = 'lobby';
-        room.currentCard = null;
-        room.isVoting = false;
-        room.currentReaderId = null;
-    } else {
-        // S'il reste des gens, on gère le transfert de chef normalement
-        const currentReaderValid = activePlayers.find(p => p.id === room.currentReaderId);
+    // 3. [ORIGINAL] Gestion du transfert de Chef (Reader)
+    if (player.isSpectator && room.currentReaderId === socket.id) {
+        const nextPlayer = room.players.find(p => !p.isSpectator && p.id !== socket.id);
+        room.currentReaderId = nextPlayer ? nextPlayer.id : null;
+    } else if (!player.isSpectator) {
+        const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator);
         if (!currentReaderValid) {
-            room.currentReaderId = activePlayers[0].id;
+            room.currentReaderId = player.id;
         }
     }
 
+    // 4. [ORIGINAL] Update client
     io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
-    io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
+    if (room.currentReaderId !== oldReaderId) {
+        io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
+    }
 });
 
     // ------ DÉMARRAGE DE PARTIE ET REJOUER ------
-
     socket.on('start_game', (roomCode) => {
         const room = rooms[roomCode];
-        if (!room) return;
-        if (room.phase !== 'lobby') return;
-
-        // Si currentReaderId est null ou invalide, on le réassigne au premier joueur actif
+        if (!room || room.phase !== 'lobby') return;
+    
+        // 1. [ORIGINAL] Re-balayage pour s'assurer qu'un chef est bien désigné
         const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
         if (!currentReaderValid) {
             const firstActive = room.players.find(p => !p.isSpectator && !p.isDead);
@@ -527,21 +534,25 @@ socket.on('toggle_role', (roomCode) => {
                 room.currentReaderId = firstActive.id;
             }
         }
-
-        // Seul le chef (currentReaderId) peut démarrer
+    
+        // 2. [ORIGINAL] Seul le chef peut lancer
         if (room.currentReaderId !== socket.id) return;
-
+    
+        // 3. [ORIGINAL] Check du nombre minimum de joueurs
         const activePlayers = room.players.filter(p => !p.isSpectator);
         if (activePlayers.length < 3) {
             return socket.emit('error_msg', "Il faut au moins 3 joueurs actifs pour démarrer !");
         }
-
-        // Lancement du compte à rebours
+    
+        // 4. [NOUVEAU] Lancement du compte à rebours avec stockage du Timer
         io.to(roomCode).emit('game_countdown', { seconds: 5 });
-
-        setTimeout(() => {
+    
+        // On stocke le timer dans l'objet room pour pouvoir l'annuler si besoin
+        room.countdownTimer = setTimeout(() => {
             if (!rooms[roomCode]) return;
             room.phase = 'drawing';
+            room.countdownTimer = null; // On nettoie après exécution
+            
             io.to(roomCode).emit('game_started', {
                 currentReaderId: room.currentReaderId,
                 players: room.players
