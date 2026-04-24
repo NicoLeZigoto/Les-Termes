@@ -60,22 +60,23 @@ function executeBackToMenu() {
     audioManager.playSound('ui-click');
     document.getElementById('confirm-modal').classList.add('hidden');
 
-    // 1. On prévient le serveur qu'on part
+    // 1. On prévient le serveur qu'on part volontairement
     socket.emit('leave_room', currentRoomCode);
 
-    // 2. On nettoie l'URL (on revient à la racine)
+    // 2. Nettoyage de la session locale pour éviter le auto-reconnect
+    localStorage.removeItem('les-termes-last-room');
+
+    // 3. On nettoie l'URL
     window.history.pushState({}, '', '/');
 
-    // 3. On réinitialise l'interface
+    // 4. On réinitialise l'interface
     document.getElementById('game-wrapper').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
     
-    // On renvoie à l'écran de choix (Créer/Rejoindre)
-    document.getElementById('step-home').classList.add('hidden');
+    document.getElementById('step-home').classList.remove('hidden');
     document.getElementById('step-identity').classList.add('hidden');
-    document.getElementById('step-choose').classList.remove('hidden');
+    document.getElementById('step-choose').classList.add('hidden');
 
-    // 4. On vide les variables locales pour éviter les conflits au prochain join
     currentRoomCode = "0000";
     players = [];
     currentCard = null;
@@ -177,6 +178,16 @@ socket.on('connect', () => {
     MY_ID = socket.id;
 });
 
+// Génère ou récupère un ID de session unique qui survit au refresh
+function getSessionID() {
+    let sessionID = localStorage.getItem('les-termes-session-id');
+    if (!sessionID) {
+        sessionID = 'session_' + Math.random().toString(36).substr(2, 9) + Date.now();
+        localStorage.setItem('les-termes-session-id', sessionID);
+    }
+    return sessionID;
+}
+
 // =========================================================
 // LOBBY — Actions réseau
 // =========================================================
@@ -195,8 +206,15 @@ function createRoom() {
         [deck[i], deck[j]] = [deck[j], deck[i]];
     }
 
+    // Sauvegarde du code de la room pour le reconnect
+    localStorage.setItem('les-termes-last-room', ""); 
+
     socket.emit('create_room', {
-        playerData: { name: pseudo, avatar: selectedAvatar },
+        playerData: { 
+            name: pseudo, 
+            avatar: selectedAvatar,
+            sessionID: getSessionID() // Ajout du sessionID
+        },
         roomName,
         scoreToWin,
         voteMode,
@@ -211,7 +229,11 @@ function joinRoom() {
 
     socket.emit('join_room', {
         roomCode: code,
-        playerData: { name: pseudo, avatar: selectedAvatar }
+        playerData: { 
+            name: pseudo, 
+            avatar: selectedAvatar,
+            sessionID: getSessionID() // Ajout du sessionID
+        }
     });
 }
 
@@ -286,15 +308,18 @@ function enterGame(phase = 'lobby') {
     updateCardSkinPickerVisibility();
     document.getElementById('room-badge').innerText = `Room: ${currentRoomCode}`;
     
+    // Sauvegarde pour le refresh F5
+    localStorage.setItem('les-termes-last-room', currentRoomCode);
+    
     window.history.pushState({}, '', `/${currentRoomCode}`);
     
     initRoomBadgeShare();
     setTimeout(() => {
         renderPlayers();
         
-        const myPlayer = players.find(p => p.id === MY_ID);
+        const myPlayer = players.find(p => p.id === MY_ID || p.sessionID === getSessionID());
         if (myPlayer && myPlayer.isSpectator) {
-            showNotification("👀 Tu as rejoint la partie en cours en tant que spectateur !");
+            showNotification("👀 Tu es en mode spectateur !");
         }
         
         if (phase === 'lobby' || phase === 'drawing' || !currentCard) {
@@ -1657,6 +1682,15 @@ function initLobbyUI() {
         avatarNextBtn.addEventListener('click', () => {
             avatarPageIndex = (avatarPageIndex + 1) % Math.ceil(AVATAR_CHOICES.length / AVATAR_PAGE_SIZE);
             renderAvatarPage();
+        });
+    }
+
+    const savedRoom = localStorage.getItem('les-termes-last-room');
+    if (savedRoom && savedRoom !== "0000") {
+        console.log("Reconnexion à la room :", savedRoom);
+        socket.emit('reconnect_session', {
+            roomCode: savedRoom,
+            sessionID: getSessionID()
         });
     }
 }

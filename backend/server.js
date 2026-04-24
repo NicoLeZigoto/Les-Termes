@@ -44,7 +44,7 @@ function broadcastPlayers(roomCode) {
     if (!room) return;
     io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
 }
-// ====== APRÈS ======
+
 function handlePlayerDeparture(socket, roomCode) {
     const room = rooms[roomCode];
     if (!room) return;
@@ -54,7 +54,6 @@ function handlePlayerDeparture(socket, roomCode) {
         room.players.splice(playerIndex, 1);
     }
 
-    // 1. [NOUVEAU] Sécurité Countdown : Si un mec quitte et qu'on est en train de lancer
     const activePlayers = room.players.filter(p => !p.isSpectator);
     if (room.countdownTimer && activePlayers.length < 3) {
         clearTimeout(room.countdownTimer);
@@ -64,7 +63,6 @@ function handlePlayerDeparture(socket, roomCode) {
         });
     }
 
-    // 2. [ORIGINAL] Room vide
     if (room.players.length === 0) {
         room._emptyTimer = setTimeout(() => {
             if (rooms[roomCode] && rooms[roomCode].players.length === 0) {
@@ -74,7 +72,6 @@ function handlePlayerDeparture(socket, roomCode) {
         return;
     }
 
-    // 3. [ORIGINAL] Passage de flambeau si le chef est parti
     if (room.currentReaderId === socket.id) {
         const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
         if (nextReader) {
@@ -362,7 +359,7 @@ io.on('connection', (socket) => {
 
         rooms[roomCode] = {
             roomName: safeRoomName,
-            players: [{ ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: false, wonCards: [] }], // Le créateur est joueur
+            players: [{ ...playerData, id: socket.id, sessionID: playerData.sessionID, score: 0, afkCount: 0, isDead: false, isSpectator: false, wonCards: [] }], // Le créateur est joueur
             currentReaderId: socket.id,
             deck: [...deck],
             cemetery: [],
@@ -418,7 +415,7 @@ socket.on('join_room', (data) => {
             isVoting: room.isVoting
         });
     }
-    const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
+    const newPlayer = { ...playerData, id: socket.id, sessionID: playerData.sessionID, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
     room.players.push(newPlayer);
     socket.join(roomCode);
 
@@ -693,69 +690,104 @@ socket.on('cast_vote', (data) => {
     });
     
     socket.on('disconnect', () => {
-        console.log(`🔴 Déconnecté : ${socket.id}`);
-
+        console.log(`🔴 Déconnexion temporaire : ${socket.id}`);
+    
         for (const [roomCode, room] of Object.entries(rooms)) {
-            const playerIndex = room.players.findIndex(p => p.id === socket.id);
-            if (playerIndex === -1) continue;
-
-            const player = room.players[playerIndex];
-
-            // En lobby, on retire purement le joueur (pas de mort)
+            const player = room.players.find(p => p.id === socket.id);
+            if (!player) continue;
+    
+            // --- CAS 1 : LOBBY ---
             if (room.phase === 'lobby') {
                 handlePlayerDeparture(socket, roomCode);
                 break;
             }
-
-            // En jeu : on marque le joueur comme mort/déconnecté sans le supprimer
-            player.isDead = true;
+    
+            // --- CAS 2 : EN JEU (F5 possible) ---
             player.disconnected = true;
-
-            io.to(roomCode).emit('player_disconnected', {
-                playerId: socket.id,
-                playerName: player.name,
-                players: room.players
-            });
-
-            // Passer le flambeau si c'était le lecteur
-            if (room.currentReaderId === socket.id) {
-                const currentIndex = room.players.findIndex(p => p.id === socket.id);
-                let nextReader = null;
-
-                for (let i = 1; i < room.players.length; i++) {
-                    const checkIndex = (currentIndex + i) % room.players.length;
-                    const p = room.players[checkIndex];
-                    if (!p.isDead && !p.disconnected && !p.isSpectator) {
-                        nextReader = p;
-                        break;
-                    }
-                }
-
-                if (nextReader) {
-                    room.currentReaderId = nextReader.id;
-
-                    if (room.phase === 'reading' || room.phase === 'drawing') {
-                        room.phase = 'drawing';
-                        if (room.pendingCards) {
-                            room.deck.push(...room.pendingCards);
-                            room.pendingCards = null;
+            
+            // On informe tout le monde que le joueur est "en suspens" (grisage à l'écran)
+            io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
+    
+            // On lance le compte à rebours de grâce
+            player.reconnectTimer = setTimeout(() => {
+                if (player.disconnected) {
+                    console.log(`💀 Délai dépassé pour ${player.name} : Traitement comme départ définitif.`);
+                    
+                    player.isDead = true;
+    
+                    io.to(roomCode).emit('player_disconnected', {
+                        playerId: player.id,
+                        playerName: player.name,
+                        players: room.players
+                    });
+    
+                    // Passage du flambeau si c'était le lecteur
+                    if (room.currentReaderId === player.id) {
+                        const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
+                        if (nextReader) {
+                            room.currentReaderId = nextReader.id;
+                            // On reset la phase de pioche pour que le nouveau puisse piocher proprement
+                            if (room.phase === 'reading' || room.phase === 'drawing') {
+                                room.phase = 'drawing';
+                                if (room.pendingCards) {
+                                    room.deck.push(...room.pendingCards);
+                                    room.pendingCards = null;
+                                }
+                            }
+                            io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
                         }
                     }
-
-                    io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
+    
+                    // Vérifier si la partie doit s'arrêter (plus que 2 joueurs)
+                    const alive = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
+                    if (alive.length <= 2) {
+                        clearTimer(room);
+                        if (alive.length > 0) {
+                            const winner = alive.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+                            io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
+                        }
+                    }
                 }
-            }
-
-            // Vérifier si la partie doit s'arrêter
-            const alive = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
-            if (alive.length <= 2 && room.phase !== 'lobby') {
-                clearTimer(room);
-                if (alive.length > 0) {
-                    const winner = alive.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-                    io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
-                }
-            }
+            }, 10000); // 10 secondes pour refresh
             break;
+        }
+    });
+    socket.on('reconnect_session', (data) => {
+        const { roomCode, sessionID } = data;
+        const room = rooms[roomCode];
+        if (!room) return;
+    
+        const player = room.players.find(p => p.sessionID === sessionID);
+        
+        if (player) {
+            // 1. Annuler la sentence de mort s'il y en avait une
+            if (player.reconnectTimer) {
+                clearTimeout(player.reconnectTimer);
+                player.reconnectTimer = null;
+            }
+    
+            // 2. Mettre à jour les infos de connexion
+            player.id = socket.id;
+            player.disconnected = false;
+            socket.join(roomCode);
+    
+            console.log(`♻️  ${player.name} a survécu au refresh.`);
+    
+            // 3. Envoyer TOUT l'état actuel pour reconstruire son interface
+            socket.emit('room_joined', {
+                roomCode,
+                roomName: room.roomName,
+                players: room.players,
+                currentReaderId: room.currentReaderId,
+                voteMode: room.voteMode,
+                scoreToWin: room.scoreToWin,
+                phase: room.phase,
+                currentCard: room.currentCard,
+                isVoting: room.isVoting
+            });
+    
+            // 4. Update visuel pour les autres (il redeviendra "opaque")
+            io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
         }
     });
 });
