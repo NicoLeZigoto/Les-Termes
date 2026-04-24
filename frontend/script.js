@@ -878,86 +878,107 @@ socket.on('reader_changed', (data) => {
 // INTERFACE — Fonctions d'affichage (inchangées)
 // =========================================================
 function prepareNextTurn() {
-    // Si un compte à rebours de démarrage est en cours, ne pas réafficher les contrôles lobby
+    // Si un compte à rebours de démarrage est en cours, on ne touche à rien
     if (isCountingDown) return;
 
     const myPlayer = players.find(p => p.id === MY_ID);
-    const inLobby = gamePhase === 'lobby';
+    // On s'appuie sur la phase synchronisée par le serveur
+    const inLobby = (gamePhase === 'lobby');
 
-    // Gestion du bouton de rôle (visible uniquement en lobby)
-    if (!inLobby) {
-        document.getElementById('role-toggle-area').classList.add('hidden');
-    } else {
-        document.getElementById('role-toggle-area').classList.remove('hidden');
+    // Petit outil interne pour éviter les erreurs "null" et simplifier le code
+    const safeToggle = (id, show) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (show) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        }
+        return el;
+    };
+
+    // 1. Gestion de la zone de changement de rôle (Spectateur / Joueur)
+    // Visible uniquement dans le lobby
+    safeToggle('role-toggle-area', inLobby);
+    
+    if (inLobby) {
         const btn = document.getElementById('btn-toggle-role');
         const icon = document.getElementById('role-icon');
         const text = document.getElementById('role-text');
         
-        if (myPlayer && myPlayer.isSpectator) {
-            btn.classList.remove('is-active');
-            icon.innerText = "👉";
-            text.innerText = "Rejoindre la partie";
-        } else {
-            btn.classList.add('is-active');
-            icon.innerText = "👀";
-            text.innerText = "Passer en spectateur";
+        // On vérifie que les éléments existent avant de modifier leur contenu
+        if (btn && icon && text && myPlayer) {
+            if (myPlayer.isSpectator) {
+                btn.classList.remove('is-active');
+                icon.innerText = "👉";
+                text.innerText = "Rejoindre la partie";
+            } else {
+                btn.classList.add('is-active');
+                icon.innerText = "👀";
+                text.innerText = "Passer en spectateur";
+            }
         }
     }
 
+    // 2. Gestion du texte d'attente et du bouton Chef (Lancer la partie)
     const readerName = players.find(p => p.id === currentReaderId)?.name || '...';
-    // reader-name est géré via le innerHTML de waiting-text — pas d'getElementById séparé
 
-    // Affichage selon la phase
     if (inLobby) {
-        document.getElementById('waiting-text').classList.add('hidden');
         if (currentReaderId === MY_ID) {
-            document.getElementById('start-controls').classList.remove('hidden');
+            // Je suis le chef : je vois le bouton Lancer, je cache le texte d'attente
+            safeToggle('start-controls', true);
+            safeToggle('waiting-text', false);
         } else {
-            document.getElementById('start-controls').classList.add('hidden');
-            const wt = document.getElementById('waiting-text');
-            wt.classList.remove('hidden');
-            wt.innerText = "En attente du chef de room...";
+            // Je ne suis pas chef : je cache le bouton, je vois le texte d'attente
+            safeToggle('start-controls', false);
+            const wt = safeToggle('waiting-text', true);
+            if (wt) wt.innerText = "En attente du chef de room...";
         }
     } else {
-        document.getElementById('start-controls').classList.add('hidden');
-        const wt = document.getElementById('waiting-text');
-        wt.classList.remove('hidden');
-        wt.innerHTML = `C'est à <strong>${readerName}</strong> de piocher !`;
+        // En cours de jeu : jamais de bouton Lancer
+        safeToggle('start-controls', false);
+        const wt = safeToggle('waiting-text', true);
+        if (wt) {
+            wt.innerHTML = `C'est à <strong>${readerName}</strong> de piocher !`;
+        }
     }
 
-    // Null-safe hide helper pour éviter tout crash si un élément est absent du DOM
-    const safeHide = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
-    safeHide('current-card');
-    safeHide('recap-display');
-    safeHide('btn-start-vote');
-    safeHide('btn-validate');
-    safeHide('timer-display');
-    safeHide('not-reader-text');
+    // 3. Nettoyage complet de l'interface de vote et des résultats (Sécurité)
+    const elementsToHide = [
+        'current-card', 'recap-display', 'btn-start-vote', 
+        'btn-validate', 'timer-display', 'not-reader-text'
+    ];
+    elementsToHide.forEach(id => safeToggle(id, false));
+
+    // Réinitialisation des états logiques de vote
     isVoting = false; 
     window._myVoteValidated = false;
     window._pendingVoteTarget = null;
     window._tieBreakCandidates = null;
     window._tieBreakExcluded = [];
 
+    // 4. Gestion de l'état du Deck (Pioche)
     const deck = document.getElementById('deck');
-    deck.classList.remove('drawing'); 
-    
-    // On rend le deck cliquable UNIQUEMENT si la partie a commencé
-    if (!inLobby && currentReaderId === MY_ID) {
-        deck.style.cursor = 'pointer';
-        deck.style.opacity = '1';
-        deck.onclick = startCardDraw;
+    if (deck) {
+        deck.classList.remove('drawing'); 
         
-        const alivePlayers = players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
-        if (alivePlayers.length < 3) {
-            showNotification("⏳ En attente d'autres joueurs pour piocher...");
+        // Le deck est cliquable uniquement si le jeu a commencé ET que je suis le lecteur
+        if (!inLobby && currentReaderId === MY_ID) {
+            deck.style.cursor = 'pointer';
+            deck.style.opacity = '1';
+            deck.onclick = startCardDraw;
+            
+            // Notification pour guider le joueur
+            const alivePlayers = players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
+            if (alivePlayers.length < 3) {
+                showNotification("⏳ En attente d'autres joueurs pour piocher...");
+            } else {
+                showNotification("🃏 C'est ton tour de piocher !");
+            }
         } else {
-            showNotification("🃏 C'est ton tour de piocher !");
+            // Sinon, le deck est visuellement désactivé
+            deck.style.cursor = 'default';
+            deck.style.opacity = '0.6';
+            deck.onclick = null;
         }
-    } else {
-        deck.style.cursor = 'default';
-        deck.style.opacity = '0.6';
-        deck.onclick = null;
     }
 }
 
