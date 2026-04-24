@@ -323,6 +323,10 @@ function startGameFromLobby() {
 }
 
 socket.on('game_started', (data) => {
+    // Cacher proprement l'overlay de countdown s'il est encore visible
+    const countdownOverlay = document.getElementById('game-countdown-overlay');
+    if (countdownOverlay) countdownOverlay.classList.add('hidden');
+    
     players = data.players;
     currentReaderId = data.currentReaderId;
     renderPlayers();
@@ -833,8 +837,14 @@ socket.on('reader_changed', (data) => {
         currentReaderId = data.newReaderId;
         renderPlayers();
         prepareNextTurn();
-        const newReader = players.find(p => p.id === data.newReaderId);
-        if (newReader) showNotification(`${newReader.avatar} ${newReader.name} doit maintenant piocher.`);
+        // N'afficher la notif de nouveau lecteur que si la partie a démarré
+        const gameStarted = players.some(p => p.wonCards.length > 0 || p.score > 0) || currentCard;
+        if (gameStarted) {
+            const newReader = players.find(p => p.id === data.newReaderId);
+            if (newReader) showNotification(`${newReader.avatar} ${newReader.name} doit maintenant piocher.`);
+        } else if (data.newReaderId === MY_ID) {
+            showNotification("👑 Tu es maintenant le chef de la room !");
+        }
     });
 });
 

@@ -4,7 +4,7 @@ const cartesJSON =[
     // ==========================================
     { category: "TRASH", text: "Qui a le QI le plus proche de la température ambiante (en Celsius) ?", comments: ["Il est con ce pd..."] },
     { category: "TRASH", text: "Qui est le plus hypocrite du groupe ?", comments:["C'est le coté bonne femme de $pseudo qui parle."] },
-    { category: "TRASH", text: "Qui a la pire hygiène de vie ?", comments:["T'attend la saison des pluies pour te doucher $pseudo ?"] },
+    { category: "TRASH", text: "Qui a la pire hygiène de vie ?", comments:["$pseudo, toi et tes folies !"] },
     { category: "TRASH", text: "Qui a l'humour le plus beauf ?", comments: ["Pouet pouet petit blagueur !"] },
     { category: "TRASH", text: "Qui pleure à la moindre critique constructive ?", comments: ["Sors les mouchoirs $pseudo, le monde est méchant."] },
     { category: "SOIREE", text: "Qui est systématiquement le premier à vomir en soirée ?", comments:["Quoi ? L'alcool c'est pas cool ?!"] },
@@ -71,5 +71,14 @@ const cartesJSON =[
     { category: "EGO", text: "Qui est le plus mauvais perdant ?", comments: ["On va finir par cacher le Monopoly à cause de toi, $pseudo."] },
     { category: "EGO", text: "Qui fait des vocaux de 4 minutes pour ne rien dire ?", comments:["On fait tous 'x2' quand tu parles, $pseudo."] },
     { category: "EGO", text: "Qui donne des conseils de vie alors que la sienne est un chaos total ?", comments:["Gère tes propres problèmes d'abord, $pseudo."] },
-    { category: "WTF", text: "Qui a le plus gros dossier photo compromettant dans les téléphones des autres ?", comments:["Le jour où on te fait chanter, t'es ruiné $pseudo."] }
+    { category: "WTF", text: "Qui a le plus gros dossier photo compromettant dans les téléphones des autres ?", comments:["Le jour où on te fait chanter, t'es ruiné $pseudo."] },
+    { category: "TRASH", text: "Qui veut absolument toujours avoir le dernier mot ?", comments:["Bravo, en votant pour $pseudo vous lui avez encore donné raison..."] },
+    { category: "TRASH", text: "Qui semble être le moins hétéro ?", comments:["Moi ça m'dérange pas $pseudo UwU"] },
+    { category: "TRASH", text: "Qui pourrait manger n'importe quoi du moment que ça se digère ?", comments:["J'suis dans la cuisine, tu boufferas évidement c'que j'te prépare"] },
+    { category: "TRASH", text: "Qui baise le moins ?", comments:["Alors $pseudo, t'es plutôt mouchoir ou chaussette ?", "et y'a aucun problème avec ça gros looser que t'es $pseudo"] },
+    { category: "TRASH", text: "Qui est le moins sportif ?", comments:["Non $pseudo, bouger ton gros cul jusqu'au frigo c'est pas du sport..."] },
+    { category: "TRASH", text: "Qui a la pire vie ?", comments:["Je t'aurais bien fait un câlin mais je fais pas dans la charité"] },
+    { category: "TRASH", text: "Qui a le visage le moins beau ?", comments:["$pseudo... un visage que seule une mère peut aimer", "Oh la vache $pseudo t'as mangé un camion avant de venir ?"] },
+    { category: "TRASH", text: "Qui est le plus stupide ?", comments:["Toi c'est sûr que tu connais le goût des couleurs", "au village des idiots $pseudo est l'idiot du village."] },
+    { category: "TRASH", text: "Qui sent le plus mauvais ?", comments:["$pseudo ! $pseudo ! La crasse sous les néons !"] },
 ];
