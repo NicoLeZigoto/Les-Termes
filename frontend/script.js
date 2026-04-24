@@ -1139,12 +1139,32 @@ function showPointerVisual(voterId, targetId) {
     const voter = players.find(p => p.id === voterId);
     const target = players.find(p => p.id === targetId);
     const pointer = document.getElementById(`pointer-${voterId}`);
+    
     if (!pointer || !voter || !target) return;
 
+    // 1. Calcul de l'angle cible en degrés
     const dx = target.centerX - voter.centerX;
     const dy = target.centerY - voter.centerY;
-    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    pointer.style.transform = `rotate(${angle}deg)`;
+    const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    // 2. Récupération de l'angle actuel (ou 0 par défaut)
+    // On utilise une propriété personnalisée pour suivre la rotation totale cumulée
+    if (pointer._currentRotation === undefined) {
+        pointer._currentRotation = 0;
+    }
+
+    const currentAngle = pointer._currentRotation;
+
+    // 3. Calcul du chemin le plus court (Normalisation entre -180 et 180)
+    // Formule : ((target - current + 180) % 360 + 360) % 360 - 180
+    let delta = (targetAngle - (currentAngle % 360) + 540) % 360 - 180;
+    
+    // 4. Mise à jour de la rotation cumulée
+    pointer._currentRotation = currentAngle + delta;
+
+    // 5. Application du style CSS
+    pointer.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s";
+    pointer.style.transform = `rotate(${pointer._currentRotation}deg)`;
     pointer.style.opacity = '1';
 }
 
