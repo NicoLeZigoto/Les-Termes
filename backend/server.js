@@ -42,7 +42,7 @@ const rooms = {};
 function broadcastPlayers(roomCode) {
     const room = rooms[roomCode];
     if (!room) return;
-    io.to(roomCode).emit('update_players', room.players);
+    io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
 }
 // ====== APRÈS ======
 function handlePlayerDeparture(socket, roomCode) {
@@ -86,7 +86,7 @@ function handlePlayerDeparture(socket, roomCode) {
     }
 
     // On prévient les survivants
-    io.to(roomCode).emit('update_players', room.players);
+    io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
 }
 
 // ====== APRÈS ======
@@ -503,7 +503,7 @@ socket.on('toggle_role', (roomCode) => {
         }
     }
 
-    io.to(roomCode).emit('update_players', room.players);
+    io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
     // Toujours émettre reader_changed si le chef a changé (lobby compris)
     if (room.currentReaderId !== oldReaderId) {
         io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
