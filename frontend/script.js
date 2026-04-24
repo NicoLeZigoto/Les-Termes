@@ -253,24 +253,11 @@ socket.on('update_players', (serverPlayers) => {
     enqueueAnimation(async () => {
         players = serverPlayers;
         renderPlayers();
-        // Rafraîchir l'état du bouton de rôle (pour le switch bidirectionnel)
+        // En lobby, on rafraîchit toute l'UI (bouton rôle + bouton démarrer)
+        // car currentReaderId a pu changer juste avant via reader_changed
         const gameStarted = players.some(p => p.wonCards.length > 0 || p.score > 0) || currentCard;
         if (!gameStarted) {
-            const myPlayer = players.find(p => p.id === MY_ID);
-            const btn = document.getElementById('btn-toggle-role');
-            const icon = document.getElementById('role-icon');
-            const text = document.getElementById('role-text');
-            if (btn && myPlayer) {
-                if (myPlayer.isSpectator) {
-                    btn.classList.remove('is-active');
-                    icon.innerText = "👉";
-                    text.innerText = "Rejoindre la partie";
-                } else {
-                    btn.classList.add('is-active');
-                    icon.innerText = "👀";
-                    text.innerText = "Passer en spectateur";
-                }
-            }
+            prepareNextTurn();
         }
     });
 });
@@ -326,6 +313,7 @@ socket.on('game_started', (data) => {
     // Cacher proprement l'overlay de countdown s'il est encore visible
     const countdownOverlay = document.getElementById('game-countdown-overlay');
     if (countdownOverlay) countdownOverlay.classList.add('hidden');
+    isCountingDown = false;
     
     players = data.players;
     currentReaderId = data.currentReaderId;
@@ -852,6 +840,9 @@ socket.on('reader_changed', (data) => {
 // INTERFACE — Fonctions d'affichage (inchangées)
 // =========================================================
 function prepareNextTurn() {
+    // Si un compte à rebours de démarrage est en cours, ne pas réafficher les contrôles lobby
+    if (isCountingDown) return;
+
     const myPlayer = players.find(p => p.id === MY_ID);
     const isLobby = !currentCard && (players.every(p => p.score === 0)); // Détection simple du lobby
 
@@ -931,11 +922,16 @@ function prepareNextTurn() {
     }
 }
 
+let isCountingDown = false;
+
 // Le socket du compte à rebours est parfait ici
 socket.on('game_countdown', (data) => {
     const overlay = document.getElementById('game-countdown-overlay');
     const val = document.getElementById('countdown-val');
     overlay.classList.remove('hidden');
+    document.getElementById('start-controls').classList.add('hidden');
+    document.getElementById('waiting-text').classList.add('hidden');
+    isCountingDown = true;
     
     let count = data.seconds;
     val.innerText = count;
@@ -945,6 +941,7 @@ socket.on('game_countdown', (data) => {
         if (count <= 0) {
             clearInterval(interval);
             overlay.classList.add('hidden');
+            // Ne pas réafficher les contrôles lobby ici — attendre game_started
         } else {
             val.innerText = count;
             audioManager.playSound('vote-tick');
