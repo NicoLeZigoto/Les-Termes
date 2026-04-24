@@ -1009,6 +1009,18 @@ socket.on('game_countdown', (data) => {
     }, 1000);
 });
 
+socket.on('countdown_cancelled', (data) => {
+    isCountingDown = false;
+    const overlay = document.getElementById('game-countdown-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    
+    showNotification(`🚫 ${data.reason}`);
+    
+    // On réaffiche les contrôles du lobby
+    prepareNextTurn();
+});
+
+
 function resetForNextRound() {
     document.querySelectorAll('.avatar').forEach(el => el.classList.remove('selected-target', 'validated', 'tie-candidate'));
     players.forEach(p => {
