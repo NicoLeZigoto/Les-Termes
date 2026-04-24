@@ -128,6 +128,13 @@ const CARD_SKINS = [
     { id: 'skin-celeste', name: 'Celeste', image: 'cartes/dos-carte-celeste.png' },
 ];
 
+// Génère ou récupère un ID unique pour ce navigateur (Persiste après F5)
+let PLAYER_TOKEN = localStorage.getItem('les-termes-token');
+if (!PLAYER_TOKEN) {
+    PLAYER_TOKEN = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('les-termes-token', PLAYER_TOKEN);
+}
+
 // ─── État local (lecture seule, tout vient du serveur) ───
 let MY_ID = "";
 let currentRoomCode = "0000";
@@ -185,6 +192,9 @@ function createRoom() {
     const pseudo = document.getElementById('input-pseudo').value.trim();
     if (!pseudo) return showNotification("Pseudo obligatoire !");
 
+    localStorage.setItem('les-termes-pseudo', pseudo);
+    localStorage.setItem('les-termes-avatar', selectedAvatar);
+
     const roomName = document.getElementById('input-room-name').value.trim() || "La Room";
     const scoreToWin = parseInt(document.getElementById('input-points').value) || 5;
     const voteMode = document.getElementById('select-vote-mode').value;
@@ -196,7 +206,7 @@ function createRoom() {
     }
 
     socket.emit('create_room', {
-        playerData: { name: pseudo, avatar: selectedAvatar },
+        playerData: { name: pseudo, avatar: selectedAvatar, token: PLAYER_TOKEN },
         roomName,
         scoreToWin,
         voteMode,
@@ -209,9 +219,12 @@ function joinRoom() {
     const code = document.getElementById('input-room-code').value.trim();
     if (!pseudo || code.length !== 4) return showNotification("Infos invalides !");
 
+    localStorage.setItem('les-termes-pseudo', pseudo);
+    localStorage.setItem('les-termes-avatar', selectedAvatar);
+
     socket.emit('join_room', {
         roomCode: code,
-        playerData: { name: pseudo, avatar: selectedAvatar }
+        playerData: { name: pseudo, avatar: selectedAvatar, token: PLAYER_TOKEN }
     });
 }
 
@@ -1139,30 +1152,19 @@ function showPointerVisual(voterId, targetId) {
     const voter = players.find(p => p.id === voterId);
     const target = players.find(p => p.id === targetId);
     const pointer = document.getElementById(`pointer-${voterId}`);
-    
     if (!pointer || !voter || !target) return;
 
-    // 1. Calcul de l'angle cible en degrés
     const dx = target.centerX - voter.centerX;
     const dy = target.centerY - voter.centerY;
     const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
 
-    // 2. Récupération de l'angle actuel (ou 0 par défaut)
-    // On utilise une propriété personnalisée pour suivre la rotation totale cumulée
-    if (pointer._currentRotation === undefined) {
-        pointer._currentRotation = 0;
-    }
-
+    if (pointer._currentRotation === undefined) pointer._currentRotation = 0;
     const currentAngle = pointer._currentRotation;
 
-    // 3. Calcul du chemin le plus court (Normalisation entre -180 et 180)
-    // Formule : ((target - current + 180) % 360 + 360) % 360 - 180
+    // Calcul du delta le plus court
     let delta = (targetAngle - (currentAngle % 360) + 540) % 360 - 180;
-    
-    // 4. Mise à jour de la rotation cumulée
     pointer._currentRotation = currentAngle + delta;
 
-    // 5. Application du style CSS
     pointer.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s";
     pointer.style.transform = `rotate(${pointer._currentRotation}deg)`;
     pointer.style.opacity = '1';
@@ -1611,20 +1613,38 @@ function startIdentitySubtitleRotation() {
     pick();
     identitySubtitleInterval = true;
 }
-
 function initLobbyUI() {
     audioManager.playMusic('lobby');
     startIdentitySubtitleRotation();
     initCardSkinPicker();
 
+    const savedPseudo = localStorage.getItem('les-termes-pseudo');
+    const savedAvatar = localStorage.getItem('les-termes-avatar');
+    
+    if (savedPseudo) {
+        document.getElementById('input-pseudo').value = savedPseudo;
+    }
+    if (savedAvatar) {
+        selectedAvatar = savedAvatar;
+    }
+
     const pathCode = window.location.pathname.replace('/', '');
     if (pathCode.length === 4 && !isNaN(pathCode)) {
+        document.getElementById('input-room-code').value = pathCode;
 
-        document.getElementById('input-room-code').value = pathCode; 
-        
-        document.getElementById('step-home').classList.add('hidden');
-        document.getElementById('step-identity').classList.remove('hidden');
-        document.getElementById('identity-subtitle').innerText = "C'est quoi ton p'tit nom ?";
+        if (savedPseudo) {
+            console.log("🔄 Tentative de reconnexion automatique à la room", pathCode);
+            setTimeout(() => {
+                socket.emit('join_room', {
+                    roomCode: pathCode,
+                    playerData: { name: savedPseudo, avatar: selectedAvatar }
+                });
+            }, 500);
+        } else {
+            document.getElementById('step-home').classList.add('hidden');
+            document.getElementById('step-identity').classList.remove('hidden');
+            document.getElementById('identity-subtitle').innerText = "C'est quoi ton p'tit nom ?";
+        }
     }
 
     const pseudoInput = document.getElementById('input-pseudo');
@@ -1659,12 +1679,6 @@ function initLobbyUI() {
             renderAvatarPage();
         });
     }
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initLobbyUI);
-} else {
-    initLobbyUI();
 }
 
 // =========================================================

@@ -44,7 +44,6 @@ function broadcastPlayers(roomCode) {
     if (!room) return;
     io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
 }
-// ====== APRÈS ======
 function handlePlayerDeparture(socket, roomCode) {
     const room = rooms[roomCode];
     if (!room) return;
@@ -54,35 +53,25 @@ function handlePlayerDeparture(socket, roomCode) {
         room.players.splice(playerIndex, 1);
     }
 
-    // 1. [NOUVEAU] Sécurité Countdown : Si un mec quitte et qu'on est en train de lancer
+    // SÉCURITÉ : Annulation countdown
     const activePlayers = room.players.filter(p => !p.isSpectator);
     if (room.countdownTimer && activePlayers.length < 3) {
         clearTimeout(room.countdownTimer);
         room.countdownTimer = null;
-        io.to(roomCode).emit('countdown_cancelled', { 
-            reason: "Un joueur a quitté la room, lancement annulé." 
-        });
+        io.to(roomCode).emit('countdown_cancelled', { reason: "Un joueur a quitté, lancement annulé." });
     }
 
-    // 2. [ORIGINAL] Room vide
     if (room.players.length === 0) {
         room._emptyTimer = setTimeout(() => {
-            if (rooms[roomCode] && rooms[roomCode].players.length === 0) {
-                delete rooms[roomCode];
-            }
-        }, 2 * 60 * 1000);
+            if (rooms[roomCode] && rooms[roomCode].players.length === 0) delete rooms[roomCode];
+        }, 120000);
         return;
     }
 
-    // 3. [ORIGINAL] Passage de flambeau si le chef est parti
     if (room.currentReaderId === socket.id) {
         const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
-        if (nextReader) {
-            room.currentReaderId = nextReader.id;
-            io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
-        } else {
-            room.currentReaderId = null;
-        }
+        room.currentReaderId = nextReader ? nextReader.id : null;
+        io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
     }
 
     io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
@@ -390,23 +379,56 @@ io.on('connection', (socket) => {
         console.log(`🏠 Room ${roomCode} créée par ${socket.id}`);
     });
 
-// ====== APRÈS ======
-socket.on('join_room', (data) => {
-    const { roomCode, playerData } = data;
-    const room = rooms[roomCode];
-    if (!room) return socket.emit('error_msg', "Room introuvable !");
-
-    // Annuler le timer de destruction si quelqu'un rejoint une room vide
-    if (room._emptyTimer) {
-        clearTimeout(room._emptyTimer);
-        room._emptyTimer = null;
-        console.log(`✅ Timer de destruction annulé pour room ${roomCode} — nouveau joueur`);
-    }
-
-    // Éviter les doublons (reconnexion rapide)
-    const existing = room.players.find(p => p.id === socket.id);
-    if (existing) {
-        return socket.emit('room_joined', {
+    socket.on('join_room', (data) => {
+        const { roomCode, playerData } = data;
+        const room = rooms[roomCode];
+        if (!room) return socket.emit('error_msg', "Room introuvable !");
+    
+        // Annuler le timer de destruction si quelqu'un revient
+        if (room._emptyTimer) {
+            clearTimeout(room._emptyTimer);
+            room._emptyTimer = null;
+        }
+    
+        // RECONNEXION PAR TOKEN : On cherche si ce joueur était déjà là
+        let player = room.players.find(p => p.token === playerData.token);
+    
+        if (player) {
+            console.log(`🔄 Reconnexion : ${player.name} (Ancien ID: ${player.id} -> Nouveau ID: ${socket.id})`);
+            player.id = socket.id; // Mise à jour de l'ID pour les futurs messages
+            player.disconnected = false;
+        } else {
+            // VRAI NOUVEAU JOUEUR
+            player = { 
+                ...playerData, 
+                id: socket.id, 
+                score: 0, 
+                afkCount: 0, 
+                isDead: false, 
+                isSpectator: true, 
+                wonCards: [], 
+                disconnected: false 
+            };
+            room.players.push(player);
+        }
+    
+        socket.join(roomCode);
+    
+        // Sécurité : Si c'est le seul actif en lobby, il devient chef
+        const activePlayers = room.players.filter(p => !p.isSpectator);
+        if (activePlayers.length === 1 && room.phase === 'lobby') {
+            room.currentReaderId = socket.id;
+            player.isSpectator = false;
+        }
+    
+        // Si on est en lobby et qu'aucun chef n'est valide, on en désigne un
+        const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
+        if (!currentReaderValid && room.phase === 'lobby' && activePlayers.length > 0) {
+            room.currentReaderId = activePlayers[0].id;
+        }
+    
+        // Envoi de l'état actuel (si lobby, currentCard est null)
+        socket.emit('room_joined', {
             roomCode,
             roomName: room.roomName,
             players: room.players,
@@ -414,46 +436,13 @@ socket.on('join_room', (data) => {
             voteMode: room.voteMode,
             scoreToWin: room.scoreToWin,
             phase: room.phase,
-            currentCard: room.currentCard,
-            isVoting: room.isVoting
+            currentCard: room.phase === 'lobby' ? null : room.currentCard,
+            isVoting: room.phase === 'lobby' ? false : room.isVoting
         });
-    }
-    const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
-    room.players.push(newPlayer);
-    socket.join(roomCode);
-
-    // Si la room n'a plus de chef valide (ex: tous passés spectateurs), le nouveau joueur devient chef
-    const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
-    if (!currentReaderValid && room.phase === 'lobby') {
-        room.currentReaderId = socket.id;
-        newPlayer.isSpectator = false; // Le nouveau chef est automatiquement joueur
-        console.log(`👑 ${newPlayer.name} devient automatiquement chef de la room ${roomCode}`);
-    }
-    // Sécurité : Si c'est le premier à rejoindre ou s'il n'y a que des spectateurs
-    const activePlayers = room.players.filter(p => !p.isSpectator);
-    if (activePlayers.length === 0) {
-        room.phase = 'lobby';
-        room.currentCard = null;
-    }
     
-    socket.emit('room_joined', {
-        roomCode,
-        roomName: room.roomName,
-        players: room.players,
-        currentReaderId: room.currentReaderId,
-        voteMode: room.voteMode,
-        scoreToWin: room.scoreToWin,
-        phase: room.phase,
-        // On s'assure d'envoyer null si on est en lobby
-        currentCard: room.phase === 'lobby' ? null : room.currentCard,
-        isVoting: room.phase === 'lobby' ? false : room.isVoting
+        io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
+        io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
     });
-
-    socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
-    // Notifier la room du nouveau currentReaderId si changement
-    socket.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
-    console.log(`👤 ${newPlayer.name} (${socket.id}) a rejoint la room ${roomCode} en tant que spectateur. Total joueurs: ${room.players.length}`);
-});
 
 // toggle_role : switch spectateur ↔ joueur (lobby uniquement, bidirectionnel)
 socket.on('toggle_role', (roomCode) => {
@@ -464,32 +453,24 @@ socket.on('toggle_role', (roomCode) => {
     if (!player) return;
 
     const oldReaderId = room.currentReaderId;
-
-    // 1. [ORIGINAL] Switch de rôle
     player.isSpectator = !player.isSpectator;
 
-    // 2. [NOUVEAU] Annulation du compte à rebours si besoin
+    // SÉCURITÉ : Annulation du lancement si < 3 joueurs actifs
     const activePlayers = room.players.filter(p => !p.isSpectator);
     if (room.countdownTimer && activePlayers.length < 3) {
         clearTimeout(room.countdownTimer);
         room.countdownTimer = null;
-        io.to(roomCode).emit('countdown_cancelled', { 
-            reason: "Pas assez de joueurs actifs pour lancer la partie." 
-        });
+        io.to(roomCode).emit('countdown_cancelled', { reason: "Pas assez de joueurs actifs pour lancer." });
     }
 
-    // 3. [ORIGINAL] Gestion du transfert de Chef (Reader)
+    // Gestion du Chef
     if (player.isSpectator && room.currentReaderId === socket.id) {
         const nextPlayer = room.players.find(p => !p.isSpectator && p.id !== socket.id);
         room.currentReaderId = nextPlayer ? nextPlayer.id : null;
-    } else if (!player.isSpectator) {
-        const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator);
-        if (!currentReaderValid) {
-            room.currentReaderId = player.id;
-        }
+    } else if (!player.isSpectator && !room.currentReaderId) {
+        room.currentReaderId = player.id;
     }
 
-    // 4. [ORIGINAL] Update client
     io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
     if (room.currentReaderId !== oldReaderId) {
         io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
@@ -693,35 +674,29 @@ socket.on('cast_vote', (data) => {
     });
     
     socket.on('disconnect', () => {
-        console.log(`🔴 Déconnecté : ${socket.id}`);
-
+        console.log(`🔴 Déconnecté (socket: ${socket.id})`);
+    
         for (const [roomCode, room] of Object.entries(rooms)) {
-            const playerIndex = room.players.findIndex(p => p.id === socket.id);
-            if (playerIndex === -1) continue;
-
-            const player = room.players[playerIndex];
-
-            // En lobby, on retire purement le joueur (pas de mort)
-            if (room.phase === 'lobby') {
-                handlePlayerDeparture(socket, roomCode);
-                break;
-            }
-
-            // En jeu : on marque le joueur comme mort/déconnecté sans le supprimer
-            player.isDead = true;
+            const player = room.players.find(p => p.id === socket.id);
+            if (!player) continue;
+    
+            // 1. Marquer le joueur comme déconnecté
             player.disconnected = true;
-
+    
+            // 2. [ORIGINAL] Prévenir les autres
             io.to(roomCode).emit('player_disconnected', {
                 playerId: socket.id,
                 playerName: player.name,
                 players: room.players
             });
-
-            // Passer le flambeau si c'était le lecteur
+    
+            // 3. [ORIGINAL + FIX] Gérer le transfert de rôle si c'était le lecteur
+            // On le fait même pour un F5 pour que le jeu ne freeze pas pour les autres
             if (room.currentReaderId === socket.id) {
                 const currentIndex = room.players.findIndex(p => p.id === socket.id);
                 let nextReader = null;
-
+    
+                // On cherche le prochain joueur valide (non mort, non spectateur, connecté)
                 for (let i = 1; i < room.players.length; i++) {
                     const checkIndex = (currentIndex + i) % room.players.length;
                     const p = room.players[checkIndex];
@@ -730,10 +705,10 @@ socket.on('cast_vote', (data) => {
                         break;
                     }
                 }
-
+    
                 if (nextReader) {
                     room.currentReaderId = nextReader.id;
-
+                    // Si on était en train de piocher, on remet les cartes dans le deck
                     if (room.phase === 'reading' || room.phase === 'drawing') {
                         room.phase = 'drawing';
                         if (room.pendingCards) {
@@ -741,20 +716,34 @@ socket.on('cast_vote', (data) => {
                             room.pendingCards = null;
                         }
                     }
-
                     io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
                 }
             }
-
-            // Vérifier si la partie doit s'arrêter
-            const alive = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
-            if (alive.length <= 2 && room.phase !== 'lobby') {
+    
+            // 4. [ORIGINAL] Vérifier si la partie doit s'arrêter (moins de 2 joueurs connectés)
+            const connectedAndAlive = room.players.filter(p => !p.disconnected && !p.isDead && !p.isSpectator);
+            if (connectedAndAlive.length < 3 && room.phase !== 'lobby') {
                 clearTimer(room);
-                if (alive.length > 0) {
-                    const winner = alive.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+                if (connectedAndAlive.length > 0) {
+                    const winner = connectedAndAlive.reduce((prev, current) => (prev.score > current.score) ? prev : current);
                     io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
                 }
             }
+    
+            // 5. [NOUVEAU] Timer de destruction si la room est TOTALEMENT vide
+            const anyoneLeft = room.players.some(p => !p.disconnected);
+            if (!anyoneLeft) {
+                room._emptyTimer = setTimeout(() => {
+                    const stillEmpty = !rooms[roomCode] || room.players.every(p => p.disconnected);
+                    if (stillEmpty) {
+                        delete rooms[roomCode];
+                        console.log(`🗑️ Room ${roomCode} détruite (inactivité).`);
+                    }
+                }, 2 * 60 * 1000);
+            }
+    
+            // On met à jour la liste pour tout le monde (pour voir le joueur en grisé/déconnecté)
+            io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
             break;
         }
     });
