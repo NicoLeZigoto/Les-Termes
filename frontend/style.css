@@ -544,19 +544,11 @@
       .slow-move { transition: left 2.5s cubic-bezier(0.25, 1, 0.5, 1), top 2.5s cubic-bezier(0.25, 1, 0.5, 1), transform 2.5s ease !important; }
       
       #right-pane {
-        flex: 1;
-        display: flex;
-        justify-content: flex-start; /* Aligne le contenu en haut */
-        align-items: center;
-        flex-direction: column;
-        padding: 100px 42px 42px; /* Augmenté le padding top pour laisser de la place au bouton */
-        min-width: 0;
-        max-width: 50%;
-        height: 100%;
-        overflow-y: auto;
-        position: relative;
-        border-left: 4px solid rgba(46,64,96,0.4);
-    }
+          flex: 1; display: flex; justify-content: center; align-items: center;
+          flex-direction: column; padding: 42px; min-width: 0; max-width: 50%;
+          height: 100%; overflow-y: auto; position: relative;
+          border-left: 4px solid rgba(46,64,96,0.4);
+      }
       
       #right-pane::before {
           content: ''; position: absolute; inset: 18px; border-radius: 28px;
@@ -850,7 +842,7 @@
 .room-neon-title {
     font-size: 3.5rem;
     color: #d42b2b;
-    margin: 0 0 40px 0; /* Espacement avec la suite */
+    margin: 0 0 20px;
     text-shadow:
         2px 2px 0 #0a1018,
         0 0 8px rgba(212,43,43,0.8),
@@ -862,28 +854,25 @@
 }
 
 .role-toggle-container {
-    position: absolute;
-    top: 40px;
-    left: 40px;
-    margin: 0;
-    width: auto;
-    z-index: 10;
+    margin-bottom: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
 }
 
 .btn-role-toggle {
     background: #1a2a3a;
     border: 2px solid #2e4060;
     color: #7a8fa8;
-    padding: 8px 16px;
-    font-size: 1rem;
+    padding: 10px 20px;
     border-radius: 30px;
     font-family: inherit;
+    font-size: 1.1rem;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
     align-items: center;
     gap: 10px;
-    
 }
 
 .btn-role-toggle:hover {

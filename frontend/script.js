@@ -1292,60 +1292,36 @@ async function animMutilation(player) {
 async function animExecution(player) {
     showNotification(`💀 ${player.name} est EXÉCUTÉ !`);
     const table = document.getElementById('table');
-    
-    // 1. On identifie l'exécuteur (le lecteur ou un autre joueur vivant)
     let executioner = players.find(p => p.id === currentReaderId);
     if (!executioner || executioner.isDead || executioner.id === player.id) {
         executioner = players.find(p => !p.isDead && p.id !== player.id);
     }
-    
-    // 2. On centre la victime pour la mise en scène
     renderPlayers(1, player.id);
-    await sleep(800); // On attend que la victime soit bien placée
+    await sleep(1500);
 
     if (executioner) {
-        // 3. Création de la bombe
         const bomb = document.createElement('div');
         bomb.innerText = '💣';
         bomb.className = 'bomb-emoji';
-        
-        // Position de départ : sur l'exécuteur
         bomb.style.left = `${executioner.centerX - 25}px`;
         bomb.style.top = `${executioner.centerY - 25}px`;
-        bomb.style.transition = "none"; // Pas de transition pour le spawn
         table.appendChild(bomb);
-
-        // Forcer le reflow pour que le navigateur enregistre la position de départ
-        bomb.offsetHeight; 
-
-        // 4. Lancement de la trajectoire
         audioManager.playSound('bomb-flight');
-        
-        // Appliquer la transition et la cible (le centre, là où est la victime)
-        bomb.style.transition = "left 1.2s cubic-bezier(0.25, 0.1, 0.25, 1), top 1.2s cubic-bezier(0.25, 0.1, 0.25, 1), transform 1.2s linear";
         bomb.style.left = `${player.centerX - 25}px`;
         bomb.style.top = `${player.centerY - 25}px`;
-        bomb.style.transform = 'rotate(720deg) scale(1.5)';
-
-        // 5. Attendre l'impact
-        await sleep(1200);
+        bomb.style.transform = 'rotate(1080deg)';
+        await sleep(1500);
         bomb.remove();
     }
-
-    // 6. Explosion à l'impact
     const explosion = document.createElement('div');
     explosion.innerText = '💥';
     explosion.className = 'explosion-emoji';
     explosion.style.left = `${player.centerX - 50}px`;
     explosion.style.top = `${player.centerY - 50}px`;
     table.appendChild(explosion);
-    
     audioManager.playSound('execution-bomb', { volume: 0.2 });
-    
-    // Marquer le joueur comme mort visuellement
     player.isDead = true;
-    renderPlayers(1, player.id); 
-
+    renderPlayers(1, player.id);
     await sleep(1500);
     explosion.remove();
 }
