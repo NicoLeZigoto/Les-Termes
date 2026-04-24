@@ -1681,6 +1681,10 @@ function initLobbyUI() {
     }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    initLobbyUI();
+});
+
 // =========================================================
 // UTILITAIRES — Toast, Badge, Cemetery, Player Cards
 // =========================================================
