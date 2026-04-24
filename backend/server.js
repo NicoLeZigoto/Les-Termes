@@ -131,144 +131,120 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     room.isVoting = false;
     room.phase = 'resolving';
 
-    // 1. Gestion des joueurs AFK (ceux qui n'ont pas voté)
+    // 1. Calcul des joueurs AFK
     const excluded = (isTieBreak && room.tieBreakExcluded) ? room.tieBreakExcluded : [];
     const afkPlayers = room.players.filter(p =>
-        !p.isDead &&
-        !p.isSpectator &&
-        !excluded.includes(p.id) &&
-        !room.votes[p.id]
+        !p.isDead && !p.isSpectator && !excluded.includes(p.id) && !room.votes[p.id]
     );
 
-    let afkDelay = 0;
+    let afkTotalDelay = 0;
     if (afkPlayers.length > 0) {
-        afkDelay = afkPlayers.length * 5000; // Délai pour les animations d'humiliation/mort
+        afkTotalDelay = afkPlayers.length * 5500; // ~5.5s par animation (humiliation/mort)
         afkPlayers.forEach(p => { 
             p.afkCount = (p.afkCount || 0) + 1; 
-            if (p.afkCount >= 3) {
-                p.isDead = true;
-            }
+            if (p.afkCount >= 3) p.isDead = true;
         });
         
+        // On envoie l'ordre de jouer les animations AFK
         io.to(roomCode).emit('afk_players', {
             afkPlayers: afkPlayers.map(p => ({ id: p.id, afkCount: p.afkCount, isDead: p.isDead })) 
         });
+    }
 
-        // Sécurité : si après les AFK il ne reste plus assez de joueurs
+    // 2. On encapsule TOUTE la suite dans un timeout égal au délai des animations AFK
+    // Cela garantit que le client a fini de voir les morts avant de voir la carte bouger.
+    setTimeout(() => {
+        // On revérifie si la room existe toujours après le délai
+        if (!rooms[roomCode]) return;
+
+        // Check sécurité : reste-t-il assez de joueurs après les AFK ?
         const aliveAfterAfk = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
         if (aliveAfterAfk.length <= 2) {
-            clearTimer(room);
             if (aliveAfterAfk.length > 0) {
                 const winner = aliveAfterAfk.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-                setTimeout(() => {
-                    io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
-                }, afkDelay + 1000);
+                io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
             }
             return;
         }
-    }
 
-    // 2. Calcul des votes effectifs
-    const voteCounts = {};
-    const validTargets = isTieBreak ? tieBreakCandidates : null;
-    Object.values(room.votes).forEach(targetId => {
-        if (validTargets && !validTargets.includes(targetId)) return;
-        voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
-    });
-
-    const totalVotes = Object.values(voteCounts).reduce((a, b) => a + b, 0);
-
-    // --- CORRECTION : SI PERSONNE NE VOTE ---
-    if (totalVotes === 0) {
-        io.to(roomCode).emit('no_votes');
-        
-        if (isTieBreak) {
-            // [NOUVEAU] Si c'est une égalité et que personne n'a voté pour départager :
-            // On laisse 2s pour voir le message "Personne n'a voté", puis on brûle la carte.
-            console.log(`🔥 Tie-break échoué (0 votes) dans la room ${roomCode}. Destruction de la carte.`);
-            return setTimeout(() => burnCard(roomCode), 2000 + afkDelay);
-        } else {
-            // Tour normal sans vote : on passe juste à la suite
-            return scheduleNextRound(roomCode, 2000 + afkDelay); 
-        }
-    }
-
-    // 3. Détermination du ou des perdants
-    let maxVotes = 0;
-    let losers = [];
-    for (const [id, count] of Object.entries(voteCounts)) {
-        if (count > maxVotes) { maxVotes = count; losers = [id]; }
-        else if (count === maxVotes) { losers.push(id); }
-    }
-
-    const aliveLosers = losers.filter(id => {
-        const p = room.players.find(pl => pl.id === id);
-        return p && !p.isDead;
-    });
-
-    // Si tous les gens votés sont déjà morts entre temps (cas rare)
-    if (aliveLosers.length === 0) {
-        io.to(roomCode).emit('all_targets_dead');
-        setTimeout(() => burnCard(roomCode), afkDelay);
-        return;
-    }
-
-    const votesByTarget = {};
-    Object.entries(room.votes).forEach(([voterId, targetId]) => {
-        if (!votesByTarget[targetId]) votesByTarget[targetId] = [];
-        votesByTarget[targetId].push(voterId);
-    });
-
-    // 4. Résolution : Un seul perdant vs Égalité
-    if (aliveLosers.length === 1) {
-        const loserId = aliveLosers[0];
-        const loser = room.players.find(p => p.id === loserId);
-
-        loser.score++;
-        loser.wonCards.push(room.currentCard);
-        room.currentReaderId = loserId; // Le perdant devient le nouveau lecteur
-
-        io.to(roomCode).emit('round_result', {
-            type: 'loser',
-            loserId,
-            votes: votesByTarget,
-            newReaderId: loserId,
-            players: room.players
+        // 3. Calcul des votes
+        const voteCounts = {};
+        const validTargets = isTieBreak ? tieBreakCandidates : null;
+        Object.values(room.votes).forEach(targetId => {
+            if (validTargets && !validTargets.includes(targetId)) return;
+            voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
         });
 
-        // Check victoire
-        if (loser.score >= room.scoreToWin) {
-            return setTimeout(() => {
-                io.to(roomCode).emit('game_over', { winnerId: loserId, players: room.players });
-            }, 7000 + afkDelay); 
+        const totalVotes = Object.values(voteCounts).reduce((a, b) => a + b, 0);
+
+        if (totalVotes === 0) {
+            io.to(roomCode).emit('no_votes');
+            return isTieBreak ? burnCard(roomCode) : scheduleNextRound(roomCode, 2000);
         }
 
-        scheduleNextRound(roomCode, 8000 + afkDelay); 
+        let maxVotes = 0;
+        let losers = [];
+        for (const [id, count] of Object.entries(voteCounts)) {
+            if (count > maxVotes) { maxVotes = count; losers = [id]; }
+            else if (count === maxVotes) losers.push(id);
+        }
 
-    } else if (aliveLosers.length >= getAlivePlayers(room).length && !isTieBreak) {
-        // Égalité générale (tout le monde a 1 vote par ex)
-        io.to(roomCode).emit('general_tie');
-        setTimeout(() => burnCard(roomCode), afkDelay); 
+        const aliveLosers = losers.filter(id => {
+            const p = room.players.find(pl => pl.id === id);
+            return p && !p.isDead;
+        });
 
-    } else {
-        // Égalité partielle -> Tie Break
-        room.tieCount = (room.tieCount || 0) + 1; 
+        if (aliveLosers.length === 0) {
+            io.to(roomCode).emit('all_targets_dead');
+            return burnCard(roomCode);
+        }
 
-        if (room.tieCount > 1) {
-            // Si c'est déjà le 2ème tie-break de suite pour cette carte -> destruction
+        const votesByTarget = {};
+        Object.entries(room.votes).forEach(([voterId, targetId]) => {
+            if (!votesByTarget[targetId]) votesByTarget[targetId] = [];
+            votesByTarget[targetId].push(voterId);
+        });
+
+        // 4. Résolution du tour
+        if (aliveLosers.length === 1) {
+            const loserId = aliveLosers[0];
+            const loser = room.players.find(p => p.id === loserId);
+
+            loser.score++;
+            loser.wonCards.push(room.currentCard);
+            room.currentReaderId = loserId;
+
+            io.to(roomCode).emit('round_result', {
+                type: 'loser',
+                loserId,
+                votes: votesByTarget,
+                newReaderId: loserId,
+                players: room.players
+            });
+
+            if (loser.score >= room.scoreToWin) {
+                return setTimeout(() => {
+                    io.to(roomCode).emit('game_over', { winnerId: loserId, players: room.players });
+                }, 7000); 
+            }
+            scheduleNextRound(roomCode, 8000); 
+
+        } else if (aliveLosers.length >= aliveAfterAfk.length && !isTieBreak) {
             io.to(roomCode).emit('general_tie');
-            setTimeout(() => burnCard(roomCode), afkDelay);
+            burnCard(roomCode);
         } else {
-            io.to(roomCode).emit('tie_break_start', { tiedPlayerIds: aliveLosers, votes: votesByTarget });
-            room.tieBreakCandidates = aliveLosers;
-            const isTwoWayTie = aliveLosers.length === 2;
-            room.tieBreakExcluded = isTwoWayTie ? aliveLosers : [];
-
-            setTimeout(() => {
-                startVotePhase(roomCode, true, aliveLosers);
-            }, 5000 + afkDelay);
+            room.tieCount = (room.tieCount || 0) + 1; 
+            if (room.tieCount > 1) {
+                io.to(roomCode).emit('general_tie');
+                burnCard(roomCode);
+            } else {
+                io.to(roomCode).emit('tie_break_start', { tiedPlayerIds: aliveLosers, votes: votesByTarget });
+                room.tieBreakCandidates = aliveLosers;
+                room.tieBreakExcluded = (aliveLosers.length === 2) ? aliveLosers : [];
+                setTimeout(() => startVotePhase(roomCode, true, aliveLosers), 5000);
+            }
         }
-    }
+    }, afkTotalDelay); // C'est ce délai qui garantit que AFK passe AVANT le résultat
 }
 
 function burnCard(roomCode) {
