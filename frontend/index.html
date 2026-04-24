@@ -15,9 +15,6 @@
         </button>
         <div id="card-skin-menu" class="hidden" role="menu" aria-label="Skins de cartes disponibles"></div>
     </div>
-    <button id="btn-volume-toggle" onclick="openVolumeMenu()" title="Paramètres Audio">
-        🔊
-    </button>
 
     <div id="lobby-screen">
         <div class="lobby-ambient">
@@ -146,7 +143,8 @@
                 </div>
 
                 <div id="spectators-container"></div>
-                
+
+                <button id="btn-volume-toggle" onclick="openVolumeMenu()" title="Paramètres Audio">🔊 Audio</button>
                 <button id="cemetery-btn" onclick="toggleCemetery()" title="Cimetière des cartes brûlées">🪦 <span id="cemetery-count">0</span></button>
 
                 <div id="waiting-area" style="width: 100%; position: relative;">
@@ -248,7 +246,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="confirm-modal" class="hidden">
         <div class="confirm-box lobby-panel card">
             <h2 style="color: #d42b2b;">Quitter la partie ?</h2>

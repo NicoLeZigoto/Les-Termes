@@ -824,7 +824,13 @@
          SPECTATEURS & MODAL
          ========================================================= */
          #spectators-container {
-            position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 10;
+            position: absolute; 
+            top: 80px; /* Au lieu de 20px, on le descend sous le bouton volume */
+            left: 28px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            z-index: 10;
         }
         .spectator-badge {
             background: rgba(26,42,58,0.8); border: 1px dashed #7a8fa8; border-radius: 8px; padding: 6px 12px; color: #a0b4c8; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-weight: bold;
@@ -924,29 +930,28 @@
    ========================================================= */
 
    #btn-volume-toggle {
-    position: fixed;
-    top: 14px;
-    right: 105px; /* S'aligne à gauche du picker de carte */
-    width: 60px;
-    height: 60px;
-    border: 2px solid #2e4060;
-    border-radius: 10px;
-    background: #1a2a3a;
+    position: absolute; 
+    top: 28px; 
+    left: 28px; /* Placé à gauche symétriquement au cimetière */
+    background: #1a2a3a; 
     color: #e8ddd0;
-    font-size: 1.8rem;
-    cursor: pointer;
-    z-index: 4500;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s, background 0.2s, border-color 0.2s;
+    border: 2px solid #2e4060; 
+    border-top: 2px solid #d42b2b;
+    border-radius: 20px; 
+    font-family: inherit; 
+    font-size: 1.1rem;
+    padding: 6px 16px; 
+    cursor: pointer; 
+    z-index: 10;
+    transition: background 0.15s, transform 0.1s; 
+    display: flex; 
+    align-items: center; 
+    gap: 6px;
 }
 
 #btn-volume-toggle:hover {
-    background: #1e2d3d;
-    border-color: #d42b2b;
-    transform: translateY(-2px);
+    background: #253447; 
+    transform: scale(1.05);
 }
 
 #volume-modal {
