@@ -455,7 +455,13 @@ socket.on('join_room', (data) => {
         newPlayer.isSpectator = false; // Le nouveau chef est automatiquement joueur
         console.log(`👑 ${newPlayer.name} devient automatiquement chef de la room ${roomCode}`);
     }
-
+    // Sécurité : Si c'est le premier à rejoindre ou s'il n'y a que des spectateurs
+    const activePlayers = room.players.filter(p => !p.isSpectator);
+    if (activePlayers.length === 0) {
+        room.phase = 'lobby';
+        room.currentCard = null;
+    }
+    
     socket.emit('room_joined', {
         roomCode,
         roomName: room.roomName,
@@ -464,8 +470,9 @@ socket.on('join_room', (data) => {
         voteMode: room.voteMode,
         scoreToWin: room.scoreToWin,
         phase: room.phase,
-        currentCard: room.currentCard,
-        isVoting: room.isVoting
+        // On s'assure d'envoyer null si on est en lobby
+        currentCard: room.phase === 'lobby' ? null : room.currentCard,
+        isVoting: room.phase === 'lobby' ? false : room.isVoting
     });
 
     socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
@@ -477,37 +484,32 @@ socket.on('join_room', (data) => {
 // toggle_role : switch spectateur ↔ joueur (lobby uniquement, bidirectionnel)
 socket.on('toggle_role', (roomCode) => {
     const room = rooms[roomCode];
-    if (!room || room.phase !== 'lobby') return;
+    if (!room) return;
 
     const player = room.players.find(p => p.id === socket.id);
     if (!player) return;
 
-    const oldReaderId = room.currentReaderId;
-
     player.isSpectator = !player.isSpectator;
-    console.log(`🔄 ${player.name} est maintenant ${player.isSpectator ? 'spectateur' : 'joueur'} dans ${roomCode}`);
 
-    // Si celui qui devient spectateur était le lecteur, transférer le flambeau
-    if (player.isSpectator && room.currentReaderId === socket.id) {
-        const nextPlayer = room.players.find(p => !p.isSpectator && p.id !== socket.id);
-        if (nextPlayer) {
-            room.currentReaderId = nextPlayer.id;
-        } else {
-            room.currentReaderId = null;
-        }
-    } else if (!player.isSpectator) {
-        // Si plus aucun lecteur valide, le nouveau joueur devient chef
-        const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator);
+    // --- NOUVELLE LOGIQUE DE SÉCURITÉ ---
+    const activePlayers = room.players.filter(p => !p.isSpectator);
+
+    if (activePlayers.length === 0) {
+        // Si plus personne ne joue, on force le retour au lobby pur
+        room.phase = 'lobby';
+        room.currentCard = null;
+        room.isVoting = false;
+        room.currentReaderId = null;
+    } else {
+        // S'il reste des gens, on gère le transfert de chef normalement
+        const currentReaderValid = activePlayers.find(p => p.id === room.currentReaderId);
         if (!currentReaderValid) {
-            room.currentReaderId = player.id;
+            room.currentReaderId = activePlayers[0].id;
         }
     }
 
     io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
-    // Toujours émettre reader_changed si le chef a changé (lobby compris)
-    if (room.currentReaderId !== oldReaderId) {
-        io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
-    }
+    io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
 });
 
     // ------ DÉMARRAGE DE PARTIE ET REJOUER ------
