@@ -503,7 +503,10 @@ socket.on('toggle_role', (roomCode) => {
     }
 
     io.to(roomCode).emit('update_players', room.players);
-    io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
+    // Notifier le changement de chef uniquement si la partie est en cours (hors lobby)
+    if (room.phase !== 'lobby') {
+        io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
+    }
 });
 
     // ------ DÉMARRAGE DE PARTIE ET REJOUER ------
