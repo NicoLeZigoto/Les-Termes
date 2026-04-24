@@ -139,6 +139,8 @@ let currentCard = null;
 let cemetery = [];
 let voteStats = { againstMe: {}, byMe: {} };
 let isVoting = false;
+// Source de vérité unique pour la phase — synchronisée depuis le serveur
+let gamePhase = 'lobby';
 
 // File d'attente pour séquencer proprement les animations ---
 let cinematicQueue = Promise.resolve();
@@ -217,6 +219,7 @@ socket.on('room_created', (data) => {
     currentReaderId = data.currentReaderId;
     SCORE_TO_WIN = data.scoreToWin;
     GAME_VOTE_MODE = data.voteMode;
+    gamePhase = 'lobby';
     document.getElementById('display-room-name').innerText = data.roomName;
     enterGame();
 });
@@ -227,6 +230,7 @@ socket.on('room_joined', (data) => {
     currentReaderId = data.currentReaderId;
     SCORE_TO_WIN = data.scoreToWin;
     GAME_VOTE_MODE = data.voteMode;
+    gamePhase = data.phase || 'lobby';
     document.getElementById('display-room-name').innerText = data.roomName || "La Room";
     
     if (data.phase && data.phase !== 'lobby') {
@@ -253,10 +257,8 @@ socket.on('update_players', (serverPlayers) => {
     enqueueAnimation(async () => {
         players = serverPlayers;
         renderPlayers();
-        // En lobby, on rafraîchit toute l'UI (bouton rôle + bouton démarrer)
-        // car currentReaderId a pu changer juste avant via reader_changed
-        const gameStarted = players.some(p => p.wonCards.length > 0 || p.score > 0) || currentCard;
-        if (!gameStarted) {
+        // En lobby, rafraîchir l'UI complète (bouton rôle + bouton chef)
+        if (gamePhase === 'lobby') {
             prepareNextTurn();
         }
     });
@@ -310,11 +312,13 @@ function startGameFromLobby() {
 }
 
 socket.on('game_started', (data) => {
-    // Cacher proprement l'overlay de countdown s'il est encore visible
     const countdownOverlay = document.getElementById('game-countdown-overlay');
     if (countdownOverlay) countdownOverlay.classList.add('hidden');
     isCountingDown = false;
-    
+
+    gamePhase = 'drawing';
+    currentCard = null;
+    isVoting = false;
     players = data.players;
     currentReaderId = data.currentReaderId;
     renderPlayers();
@@ -341,7 +345,8 @@ function replayGame() {
 socket.on('game_reset_state', (data) => {
     players = data.players;
     currentReaderId = data.currentReaderId;
-    cemetery =[];
+    gamePhase = 'lobby';
+    cemetery = [];
     currentCard = null;
     isVoting = false;
     window._myVoteValidated = false;
@@ -350,7 +355,6 @@ socket.on('game_reset_state', (data) => {
     document.getElementById('cemetery-count').innerText = "0";
     document.getElementById('cemetery-cards').innerHTML = "<p class='cemetery-empty'>Aucune carte brûlée pour l'instant...</p>";
     
-    // On force l'actualisation visuelle (ce qui reset les mains des joueurs automatiquement vu que wonCards est vidé sur le serv)
     renderPlayers();
     prepareNextTurn();
 });
@@ -483,6 +487,7 @@ function startVoteTimer() {
 socket.on('vote_phase_start', (data) => {
     const { duration, isTieBreak, tieBreakCandidates, tieBreakExcluded } = data;
 
+    gamePhase = 'voting';
     isVoting = true;
     localTimer = duration;
     document.getElementById('btn-start-vote').classList.add('hidden');
@@ -790,6 +795,7 @@ socket.on('card_burned', (data) => {
 
 socket.on('next_round', (data) => {
     enqueueAnimation(async () => {
+        gamePhase = 'drawing';
         players = data.players;
         currentReaderId = data.currentReaderId;
         renderPlayers();
@@ -825,9 +831,7 @@ socket.on('reader_changed', (data) => {
         currentReaderId = data.newReaderId;
         renderPlayers();
         prepareNextTurn();
-        // N'afficher la notif de nouveau lecteur que si la partie a démarré
-        const gameStarted = players.some(p => p.wonCards.length > 0 || p.score > 0) || currentCard;
-        if (gameStarted) {
+        if (gamePhase !== 'lobby') {
             const newReader = players.find(p => p.id === data.newReaderId);
             if (newReader) showNotification(`${newReader.avatar} ${newReader.name} doit maintenant piocher.`);
         } else if (data.newReaderId === MY_ID) {
@@ -844,13 +848,10 @@ function prepareNextTurn() {
     if (isCountingDown) return;
 
     const myPlayer = players.find(p => p.id === MY_ID);
-    const isLobby = !currentCard && (players.every(p => p.score === 0)); // Détection simple du lobby
+    const inLobby = gamePhase === 'lobby';
 
-    // Gestion du bouton de rôle (visible uniquement avant le début)
-    const activePlayers = players.filter(p => !p.isSpectator);
-    const gameStarted = players.some(p => p.wonCards.length > 0 || p.score > 0) || currentCard;
-    
-    if (gameStarted) {
+    // Gestion du bouton de rôle (visible uniquement en lobby)
+    if (!inLobby) {
         document.getElementById('role-toggle-area').classList.add('hidden');
     } else {
         document.getElementById('role-toggle-area').classList.remove('hidden');
@@ -872,8 +873,8 @@ function prepareNextTurn() {
     const readerName = players.find(p => p.id === currentReaderId)?.name || '...';
     document.getElementById('reader-name').innerText = readerName;
 
-    // Si on est au tout début (Lobby)
-    if (!gameStarted) {
+    // Affichage selon la phase
+    if (inLobby) {
         document.getElementById('waiting-text').classList.add('hidden');
         if (currentReaderId === MY_ID) {
             document.getElementById('start-controls').classList.remove('hidden');
@@ -885,7 +886,7 @@ function prepareNextTurn() {
     } else {
         document.getElementById('start-controls').classList.add('hidden');
         document.getElementById('waiting-text').classList.remove('hidden');
-        document.getElementById('waiting-text').innerHTML = `C'est à <strong id="reader-name">${readerName}</strong> de piocher !`;
+        document.getElementById('waiting-text').innerHTML = `C'est à <strong>${readerName}</strong> de piocher !`;
     }
 
     document.getElementById('current-card').classList.add('hidden');
@@ -904,7 +905,7 @@ function prepareNextTurn() {
     deck.classList.remove('drawing'); 
     
     // On rend le deck cliquable UNIQUEMENT si la partie a commencé
-    if (gameStarted && currentReaderId === MY_ID) {
+    if (!inLobby && currentReaderId === MY_ID) {
         deck.style.cursor = 'pointer';
         deck.style.opacity = '1';
         deck.onclick = startCardDraw;
