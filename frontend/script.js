@@ -60,9 +60,6 @@ function executeBackToMenu() {
     audioManager.playSound('ui-click');
     document.getElementById('confirm-modal').classList.add('hidden');
 
-    // Effacer la session persistée (retour volontaire au menu)
-    sessionStorage.removeItem('les-termes-session');
-
     // 1. On prévient le serveur qu'on part
     socket.emit('leave_room', currentRoomCode);
 
@@ -178,19 +175,6 @@ const socket = io();
 
 socket.on('connect', () => {
     MY_ID = socket.id;
-
-    // Tentative de reprise de session après F5 / reconnexion
-    const saved = sessionStorage.getItem('les-termes-session');
-    if (saved) {
-        try {
-            const { roomCode, pseudo, avatar } = JSON.parse(saved);
-            if (roomCode && pseudo) {
-                socket.emit('reconnect_session', { roomCode, pseudo, avatar });
-            }
-        } catch (e) {
-            sessionStorage.removeItem('les-termes-session');
-        }
-    }
 });
 
 // =========================================================
@@ -230,26 +214,6 @@ function joinRoom() {
         playerData: { name: pseudo, avatar: selectedAvatar }
     });
 }
-
-socket.on('session_restored', (data) => {
-    currentRoomCode = data.roomCode;
-    players = data.players;
-    currentReaderId = data.currentReaderId;
-    SCORE_TO_WIN = data.scoreToWin;
-    GAME_VOTE_MODE = data.voteMode;
-    gamePhase = data.phase || 'lobby';
-    document.getElementById('display-room-name').innerText = data.roomName || 'La Room';
-
-    if (data.currentCard) currentCard = data.currentCard;
-    if (data.isVoting !== undefined) isVoting = data.isVoting;
-
-    enterGame(data.phase);
-});
-
-socket.on('session_not_found', () => {
-    // La room n'existe plus ou le code est invalide : on nettoie et on reste au lobby
-    sessionStorage.removeItem('les-termes-session');
-});
 
 // ─── Réponses serveur : lobby ───
 
@@ -315,16 +279,6 @@ socket.on('update_players', (data) => {
 socket.on('error_msg', (msg) => showNotification(msg));
 
 function enterGame(phase = 'lobby') {
-    // Persister la session pour survivre à un F5
-    const myPlayer = players.find(p => p.id === MY_ID);
-    if (myPlayer) {
-        sessionStorage.setItem('les-termes-session', JSON.stringify({
-            roomCode: currentRoomCode,
-            pseudo: myPlayer.name,
-            avatar: myPlayer.avatar
-        }));
-    }
-
     audioManager.stopMusic();
     audioManager.playMusic('game', { volume: 0.02 });
     document.getElementById('lobby-screen').classList.add('hidden');
