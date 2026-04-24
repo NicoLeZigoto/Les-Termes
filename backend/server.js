@@ -346,6 +346,70 @@ function startVotePhase(roomCode, isTieBreak = false, tieBreakCandidates = []) {
 io.on('connection', (socket) => {
     console.log(`🟢 Connecté : ${socket.id}`);
 
+    // ------ RECONNEXION APRÈS F5 ------
+
+    socket.on('reconnect_session', (data) => {
+        const { roomCode, pseudo, avatar } = data;
+        const room = rooms[roomCode];
+
+        if (!room) {
+            return socket.emit('session_not_found');
+        }
+
+        // Chercher si le joueur était déjà dans la room (même pseudo + même avatar)
+        const existingPlayer = room.players.find(
+            p => p.name === pseudo && p.avatar === avatar
+        );
+
+        if (existingPlayer) {
+            // Mettre à jour son socket ID (il a un nouvel ID après reconnexion)
+            const oldId = existingPlayer.id;
+            existingPlayer.id = socket.id;
+            existingPlayer.disconnected = false;
+
+            // Si c'était le lecteur, mettre à jour currentReaderId
+            if (room.currentReaderId === oldId) {
+                room.currentReaderId = socket.id;
+            }
+
+            // Mettre à jour les votes qui le concernent
+            if (room.votes[oldId]) {
+                room.votes[socket.id] = room.votes[oldId];
+                delete room.votes[oldId];
+            }
+        } else {
+            // Le joueur n'était pas dans cette room : on le rejoint en spectateur
+            const newPlayer = {
+                name: pseudo, avatar, id: socket.id,
+                score: 0, afkCount: 0, isDead: false,
+                isSpectator: true, wonCards: []
+            };
+            room.players.push(newPlayer);
+        }
+
+        socket.join(roomCode);
+
+        socket.emit('session_restored', {
+            roomCode,
+            roomName: room.roomName,
+            players: room.players,
+            currentReaderId: room.currentReaderId,
+            voteMode: room.voteMode,
+            scoreToWin: room.scoreToWin,
+            phase: room.phase,
+            currentCard: room.currentCard,
+            isVoting: room.isVoting
+        });
+
+        // Prévenir les autres de la mise à jour des joueurs
+        socket.to(roomCode).emit('update_players', {
+            players: room.players,
+            currentReaderId: room.currentReaderId
+        });
+
+        console.log(`🔁 Session restaurée pour ${pseudo} dans la room ${roomCode}`);
+    });
+
     // ------ LOBBY ------
 
     socket.on('create_room', (data) => {
