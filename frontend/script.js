@@ -58,24 +58,23 @@ function closeConfirmModal() {
 
 function executeBackToMenu() {
     audioManager.playSound('ui-click');
+
+    audioManager.stopSound('heartbeat');
+    document.body.classList.remove('urgent-flash');
+
     document.getElementById('confirm-modal').classList.add('hidden');
 
-    // 1. On prévient le serveur qu'on part
     socket.emit('leave_room', currentRoomCode);
 
-    // 2. On nettoie l'URL (on revient à la racine)
     window.history.pushState({}, '', '/');
 
-    // 3. On réinitialise l'interface
     document.getElementById('game-wrapper').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
     
-    // On renvoie à l'écran de choix (Créer/Rejoindre)
     document.getElementById('step-home').classList.add('hidden');
     document.getElementById('step-identity').classList.add('hidden');
     document.getElementById('step-choose').classList.remove('hidden');
 
-    // 4. On vide les variables locales pour éviter les conflits au prochain join
     currentRoomCode = "0000";
     players = [];
     currentCard = null;
@@ -366,11 +365,13 @@ socket.on('game_reset_state', (data) => {
     window._myVoteValidated = false;
     window._pendingVoteTarget = null;
 
-    // Nettoyage des effets de stress résiduels
+    document.getElementById('cemetery-overlay').classList.add('hidden');
+    document.getElementById('player-cards-overlay').classList.add('hidden');
+    document.getElementById('card-selection-overlay').classList.add('hidden');
+
     audioManager.stopSound('heartbeat');
     document.body.classList.remove('urgent-flash');
 
-    // Purge le texte de l'ancienne carte pour éviter le flash fantôme
     const cardCategory = document.getElementById('card-category');
     const cardText = document.getElementById('card-text');
     if (cardCategory) cardCategory.innerText = '';
@@ -382,6 +383,7 @@ socket.on('game_reset_state', (data) => {
     renderPlayers();
     prepareNextTurn();
 });
+
 // =========================================================
 // TOUR DE JEU — PIOCHE
 // =========================================================
@@ -694,7 +696,6 @@ socket.on('afk_players', (data) => {
 });
 
 socket.on('round_result', (data) => {
-    // On met à jour l'UI instantanément pour stopper les sons et cacher les chronos
     audioManager.stopSound('heartbeat');
     isVoting = false;
     window._myVoteValidated = false;
@@ -703,11 +704,9 @@ socket.on('round_result', (data) => {
     document.getElementById('timer-display').classList.add('hidden');
     document.getElementById('btn-validate').classList.add('hidden');
 
-    // On séquence le résultat APRES la fin des éventuelles animations AFK
     enqueueAnimation(async () => {
-        players = data.players;
+        players = data.players; // Les datas s'appliquent bien au bon moment
 
-        // --- CORRECTION BUG 5: Comptabilisation des statistiques (Ennemis jurés) ---
         Object.entries(data.votes).forEach(([targetId, voterIds]) => {
             voterIds.forEach(voterId => {
                 if (targetId === MY_ID) {
@@ -727,7 +726,7 @@ socket.on('round_result', (data) => {
 
         if (data.type === 'loser') {
             const loser = players.find(p => p.id === data.loserId);
-            const voterIds = data.votes[data.loserId] ||[];
+            const voterIds = data.votes[data.loserId] || [];
             const voterNames = voterIds.map(id => players.find(p => p.id === id)?.name).filter(Boolean);
             const votersText = voterNames.length <= 1
                 ? (voterNames[0] || '?')
@@ -756,8 +755,6 @@ socket.on('round_result', (data) => {
             recapEl.innerHTML = recapMessage;
             recapEl.classList.remove('hidden');
 
-            // On attend que l'animation de transfert soit terminée avant de libérer la file d'attente
-            // Timeout de sécurité à 4s pour éviter tout blocage de la file d'animation
             await Promise.race([
                 new Promise(resolve => {
                     setTimeout(() => {
@@ -772,7 +769,6 @@ socket.on('round_result', (data) => {
                 }),
                 new Promise(resolve => setTimeout(resolve, 4000))
             ]);
-            // S'assurer que currentReaderId est bien à jour même si le timeout de sécurité s'est déclenché
             currentReaderId = data.newReaderId;
         }
     });
@@ -1187,29 +1183,22 @@ function showPointerVisual(voterId, targetId) {
     
     if (!pointer || !voter || !target) return;
 
-    // 1. Calcul de l'angle cible en degrés
     const dx = target.centerX - voter.centerX;
     const dy = target.centerY - voter.centerY;
     const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
 
-    // 2. Récupération de l'angle actuel (ou 0 par défaut)
-    // On utilise une propriété personnalisée pour suivre la rotation totale cumulée
-    if (pointer._currentRotation === undefined) {
-        pointer._currentRotation = 0;
+    if (voter.currentRotation === undefined) {
+        voter.currentRotation = 0;
     }
 
-    const currentAngle = pointer._currentRotation;
+    const currentAngle = voter.currentRotation;
 
-    // 3. Calcul du chemin le plus court (Normalisation entre -180 et 180)
-    // Formule : ((target - current + 180) % 360 + 360) % 360 - 180
     let delta = (targetAngle - (currentAngle % 360) + 540) % 360 - 180;
     
-    // 4. Mise à jour de la rotation cumulée
-    pointer._currentRotation = currentAngle + delta;
+    voter.currentRotation = currentAngle + delta;
 
-    // 5. Application du style CSS
     pointer.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s";
-    pointer.style.transform = `rotate(${pointer._currentRotation}deg)`;
+    pointer.style.transform = `rotate(${voter.currentRotation}deg)`;
     pointer.style.opacity = '1';
 }
 
@@ -1226,6 +1215,10 @@ async function playCinematic(player) {
     backdrop.classList.add('active');
     table.classList.add('table-cinematic');
     document.getElementById('deck').style.opacity = '0';
+    
+    document.querySelectorAll('.pointer').forEach(el => el.style.opacity = '0');
+    document.querySelectorAll('.btn-poke').forEach(el => el.classList.add('hidden'));
+
     document.querySelectorAll('.player').forEach(p => p.classList.add('slow-move'));
 
     if (player.afkCount === 1) await animHumiliation(player);
@@ -1552,6 +1545,9 @@ function endGameBecauseDeckIsEmpty() {
 }
 
 function showVictory(winner) {
+    audioManager.stopSound('heartbeat');
+    document.body.classList.remove('urgent-flash');
+
     audioManager.stopMusic();
     audioManager.playSound('victory');
     
@@ -1571,6 +1567,9 @@ function showVictory(winner) {
 }
 
 function showTie(winners) {
+    audioManager.stopSound('heartbeat');
+    document.body.classList.remove('urgent-flash');
+
     audioManager.stopMusic();
     audioManager.playSound('victory');
 

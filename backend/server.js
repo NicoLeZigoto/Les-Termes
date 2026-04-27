@@ -54,8 +54,6 @@ function handlePlayerDeparture(socket, roomCode) {
 
     const player = room.players[playerIndex];
 
-    // En cours de partie : on marque le joueur mort/déconnecté au lieu de le supprimer,
-    // pour qu'il apparaisse dans le résumé final et que les scores soient préservés.
     if (room.phase !== 'lobby') {
         player.isDead = true;
         player.disconnected = true;
@@ -71,8 +69,12 @@ function handlePlayerDeparture(socket, roomCode) {
             const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
             if (nextReader) {
                 room.currentReaderId = nextReader.id;
+                
+                // CORRECTION BUG 5 : Réinitialisation si la phase est reading
                 if (room.phase === 'reading' || room.phase === 'drawing') {
                     room.phase = 'drawing';
+                    room.currentCard = null; // On annule la carte en cours pour le nouveau lecteur
+                    
                     if (room.pendingCards) {
                         room.deck.push(...room.pendingCards);
                         room.pendingCards = null;
@@ -89,8 +91,6 @@ function handlePlayerDeparture(socket, roomCode) {
         if (alive.length <= 2) {
             clearTimer(room);
             if (alive.length > 0) {
-                // On passe TOUS les joueurs actifs (même morts) pour que emitGameOver
-                // calcule le vrai gagnant/égalité sur la totalité des scores
                 const allActive = room.players.filter(p => !p.isSpectator);
                 emitGameOver(roomCode, allActive);
             }
@@ -213,7 +213,9 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
 
     let afkTotalDelay = 0;
     if (afkPlayers.length > 0) {
-        afkTotalDelay = afkPlayers.length * 5500; // ~5.5s par animation (humiliation/mort)
+        // CORRECTION BUG 3 : Augmentation à 6.5s/joueur + marge de sécurité de 1000ms
+        afkTotalDelay = (afkPlayers.length * 6500) + 1000; 
+        
         afkPlayers.forEach(p => { 
             p.afkCount = (p.afkCount || 0) + 1; 
             if (p.afkCount >= 3) p.isDead = true;
@@ -226,7 +228,6 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     }
 
     // 2. On encapsule TOUTE la suite dans un timeout égal au délai des animations AFK
-    // Cela garantit que le client a fini de voir les morts avant de voir la carte bouger.
     setTimeout(() => {
         // On revérifie si la room existe toujours après le délai
         if (!rooms[roomCode]) return;
@@ -318,7 +319,7 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
                 setTimeout(() => startVotePhase(roomCode, true, aliveLosers), 5000);
             }
         }
-    }, afkTotalDelay); // C'est ce délai qui garantit que AFK passe AVANT le résultat
+    }, afkTotalDelay); 
 }
 
 function burnCard(roomCode) {
