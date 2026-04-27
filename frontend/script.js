@@ -42,7 +42,7 @@ function goToStep2() {
 function stepPoints(delta) {
     audioManager.playSound('ui-click');
     const input = document.getElementById('input-points');
-    const current = parseInt(input.value) || 5;
+    const current = Math.min(15, Math.max(2, parseInt(input.value) || 5));
     input.value = Math.min(15, Math.max(2, current + delta));
 }
 
@@ -186,7 +186,9 @@ function createRoom() {
     if (!pseudo) return showNotification("Pseudo obligatoire !");
 
     const roomName = document.getElementById('input-room-name').value.trim() || "La Room";
-    const scoreToWin = parseInt(document.getElementById('input-points').value) || 5;
+    const rawPoints = parseInt(document.getElementById('input-points').value);
+    const scoreToWin = isNaN(rawPoints) ? 5 : Math.min(15, Math.max(2, rawPoints));
+    document.getElementById('input-points').value = scoreToWin;
     const voteMode = document.getElementById('select-vote-mode').value;
     const deck = typeof cartesJSON !== 'undefined' ? [...cartesJSON] : [];
 
@@ -1317,6 +1319,7 @@ async function animExecution(player) {
         bomb.style.top = `${executioner.centerY - 25}px`;
         table.appendChild(bomb);
         audioManager.playSound('bomb-flight');
+        await sleep(30); // Force le navigateur à peindre la position de départ avant la transition
         bomb.style.left = `${player.centerX - 25}px`;
         bomb.style.top = `${player.centerY - 25}px`;
         bomb.style.transform = 'rotate(1080deg)';
@@ -1500,17 +1503,19 @@ function endGameBecauseDeckIsEmpty() {
     const bestScore = Math.max(...contenders.map(p => p.score));
     const winners = contenders.filter(p => p.score === bestScore);
 
-    showNotification("🃏 Plus de cartes disponibles : fin de partie !");
-
     if (winners.length === 1) {
+        showNotification("🃏 Plus de cartes disponibles : fin de partie !");
         showVictory(winners[0]);
         const msg = document.getElementById('victory-message');
         if (msg) msg.innerHTML = `${winners[0].avatar} <strong>${winners[0].name}</strong> remporte la partie : le deck est vide.`;
-    } else {
-        showTie(winners);
-        const msg = document.getElementById('victory-message');
-        if (msg) msg.innerHTML = `Égalité (deck vide) entre ${winners.map(p => `${p.avatar} <strong>${p.name}</strong>`).join(', ')} avec ${bestScore} point${bestScore > 1 ? 's' : ''}.`;
+        return;
     }
+    const overlay = document.getElementById('victory-overlay');
+    document.getElementById('victory-title').innerHTML = "🃏 DECK VIDE 🃏";
+    document.getElementById('victory-message').innerHTML = `Égalité entre ${winners.map(p => `${p.avatar} <strong>${p.name}</strong>`).join(', ')} avec ${bestScore} point${bestScore > 1 ? 's' : ''}.`;
+    renderRivalrySummary();
+    renderEndgameCardsSummary(winners);
+    overlay.classList.remove('hidden');
 }
 
 function showVictory(winner) {
@@ -1724,6 +1729,19 @@ function initLobbyUI() {
 
     const pseudoInput = document.getElementById('input-pseudo');
     if (pseudoInput) pseudoInput.placeholder = PSEUDO_PLACEHOLDERS[Math.floor(Math.random() * PSEUDO_PLACEHOLDERS.length)];
+
+    const pointsInput = document.getElementById('input-points');
+    if (pointsInput) {
+        pointsInput.addEventListener('keydown', e => {
+            if (['e', 'E', '-', '+', '.'].includes(e.key)) e.preventDefault();
+        });
+        pointsInput.addEventListener('input', () => {
+            let v = parseInt(pointsInput.value);
+            if (isNaN(v)) return; // laisser l'utilisateur finir de taper
+            if (v > 15) pointsInput.value = 15;
+            if (v < 1) pointsInput.value = 2;
+        });
+    }
 
     const roomInput = document.getElementById('input-room-name');
     if (roomInput) roomInput.placeholder = ROOM_NAME_PLACEHOLDERS[Math.floor(Math.random() * ROOM_NAME_PLACEHOLDERS.length)];
