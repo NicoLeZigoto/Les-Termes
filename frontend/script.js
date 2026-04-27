@@ -648,7 +648,7 @@ function validateMyVote() {
 
     const notReaderText = document.getElementById('not-reader-text');
     if (notReaderText) {
-        notReaderText.innerText = "✅ En attente du vote des autres joueurs...";
+        notReaderText.innerText = "En attente du vote des autres joueurs...";
         notReaderText.classList.remove('hidden');
     }
 

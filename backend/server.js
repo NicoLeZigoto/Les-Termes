@@ -693,13 +693,6 @@ socket.on('toggle_role', (roomCode) => {
         
         io.to(roomCode).emit('show_card', { card });
         console.log(`📖 Carte choisie dans la room ${roomCode}`);
-
-        if (room.pokeTimer) clearTimeout(room.pokeTimer);
-        room.pokeTimer = setTimeout(() => {
-            if (rooms[roomCode] && rooms[roomCode].phase === 'reading') {
-                io.to(roomCode).emit('poke_enabled', { readerId: room.currentReaderId });
-            }
-        }, 30000);
     });
 
     // ------ LANCEMENT DU VOTE ------
@@ -709,25 +702,7 @@ socket.on('toggle_role', (roomCode) => {
         if (!room || room.currentReaderId !== socket.id) return;
         if (room.phase !== 'reading') return;
 
-        // NOUVEAU : Nettoyage du timer si le vote démarre
-        if (room.pokeTimer) {
-            clearTimeout(room.pokeTimer);
-            room.pokeTimer = null;
-        }
-
         startVotePhase(roomCode);
-    });
-
-    // ------ SYSTÈME DE POKE ------
-    socket.on('trigger_poke', (roomCode) => {
-        const room = rooms[roomCode];
-        if (!room || room.phase !== 'reading') return;
-        
-        // On diffuse l'ordre d'animation à toute la room
-        io.to(roomCode).emit('execute_poke', { 
-            senderId: socket.id, 
-            targetId: room.currentReaderId 
-        });
     });
 
 // ====== APRÈS ======
