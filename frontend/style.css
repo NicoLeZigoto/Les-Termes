@@ -653,8 +653,8 @@
          TOASTS
          ========================================================= */
       
-      #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 3000; }
-      .toast { background: #1a2a3a; color: #e8ddd0; border: 1px solid #2e4060; border-left: 4px solid #d42b2b; padding: 12px 25px; border-radius: 8px; font-size: 1.3rem; box-shadow: 0 6px 24px rgba(0,0,0,0.6); animation: popIn 0.3s ease-out forwards; }
+         #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 15000; }
+         .toast { background: #1a2a3a; color: #e8ddd0; border: 1px solid #2e4060; border-left: 4px solid #d42b2b; padding: 12px 25px; border-radius: 8px; font-size: 1.3rem; box-shadow: 0 6px 24px rgba(0,0,0,0.6); animation: popIn 0.3s ease-out forwards; }
       @keyframes popIn { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
       
       /* =========================================================

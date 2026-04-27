@@ -478,6 +478,9 @@ socket.on('join_room', (data) => {
         console.log(`✅ Timer de destruction annulé pour room ${roomCode} — nouveau joueur`);
     }
 
+    // CORRECTION BUG 2 : On récupère la liste des joueurs ayant déjà validé leur vote
+    const votedPlayers = Object.keys(room.votes || {});
+
     // Éviter les doublons (reconnexion rapide)
     const existing = room.players.find(p => p.id === socket.id);
     if (existing) {
@@ -490,7 +493,8 @@ socket.on('join_room', (data) => {
             scoreToWin: room.scoreToWin,
             phase: room.phase,
             currentCard: room.currentCard,
-            isVoting: room.isVoting
+            isVoting: room.isVoting,
+            votedPlayers // Injecté ici
         });
     }
     const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
@@ -521,13 +525,14 @@ socket.on('join_room', (data) => {
         phase: room.phase,
         // On s'assure d'envoyer null si on est en lobby
         currentCard: room.phase === 'lobby' ? null : room.currentCard,
-        isVoting: room.phase === 'lobby' ? false : room.isVoting
+        isVoting: room.phase === 'lobby' ? false : room.isVoting,
+        votedPlayers // Injecté ici
     });
 
     socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
     // Notifier la room du nouveau currentReaderId si changement
     socket.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
-    console.log(`👤 ${newPlayer.name} (${socket.id}) a rejoint la room ${roomCode} en tant que spectateur. Total joueurs: ${room.players.length}`);
+    console.log(`${newPlayer.name} (${socket.id}) a rejoint la room ${roomCode} en tant que spectateur. Total joueurs: ${room.players.length}`);
 });
 
 // toggle_role : switch spectateur ↔ joueur (lobby uniquement, bidirectionnel)
@@ -575,6 +580,9 @@ socket.on('toggle_role', (roomCode) => {
     socket.on('start_game', (roomCode) => {
         const room = rooms[roomCode];
         if (!room || room.phase !== 'lobby') return;
+    
+        // CORRECTION BUG 1 : Empêcher le double lancement si le timer existe déjà
+        if (room.countdownTimer) return;
     
         // 1. [ORIGINAL] Re-balayage pour s'assurer qu'un chef est bien désigné
         const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
