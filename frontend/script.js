@@ -909,6 +909,7 @@ socket.on('reader_changed', (data) => {
 // =========================================================
 // INTERFACE — Fonctions d'affichage (inchangées)
 // =========================================================
+
 function prepareNextTurn() {
     // Si un compte à rebours de démarrage est en cours, on ne touche à rien
     if (isCountingDown) return;
@@ -928,7 +929,6 @@ function prepareNextTurn() {
     };
 
     // 1. Gestion de la zone de changement de rôle (Spectateur / Joueur)
-    // Visible uniquement dans le lobby
     safeToggle('role-toggle-area', inLobby);
     
     if (inLobby) {
@@ -936,7 +936,6 @@ function prepareNextTurn() {
         const icon = document.getElementById('role-icon');
         const text = document.getElementById('role-text');
         
-        // On vérifie que les éléments existent avant de modifier leur contenu
         if (btn && icon && text && myPlayer) {
             if (myPlayer.isSpectator) {
                 btn.classList.remove('is-active');
@@ -955,17 +954,14 @@ function prepareNextTurn() {
 
     if (inLobby) {
         if (currentReaderId === MY_ID) {
-            // Je suis le chef : je vois le bouton Lancer, je cache le texte d'attente
             safeToggle('start-controls', true);
             safeToggle('waiting-text', false);
         } else {
-            // Je ne suis pas chef : je cache le bouton, je vois le texte d'attente
             safeToggle('start-controls', false);
             const wt = safeToggle('waiting-text', true);
             if (wt) wt.innerText = "En attente du chef de room...";
         }
     } else {
-        // En cours de jeu : jamais de bouton Lancer
         safeToggle('start-controls', false);
         const wt = safeToggle('waiting-text', true);
         if (wt) {
@@ -973,12 +969,15 @@ function prepareNextTurn() {
         }
     }
 
-    // 3. Nettoyage complet de l'interface de vote et des résultats (Sécurité)
+    // 3. Nettoyage complet de l'interface de vote et des résultats
     const elementsToHide = [
         'current-card', 'recap-display', 'btn-start-vote', 
         'btn-validate', 'timer-display', 'not-reader-text'
     ];
     elementsToHide.forEach(id => safeToggle(id, false));
+
+    // NOUVEAU : On cache tous les boutons Poke actifs
+    document.querySelectorAll('.btn-poke').forEach(btn => btn.classList.add('hidden'));
 
     // Réinitialisation des états logiques de vote
     isVoting = false; 
@@ -992,13 +991,11 @@ function prepareNextTurn() {
     if (deck) {
         deck.classList.remove('drawing'); 
         
-        // Le deck est cliquable uniquement si le jeu a commencé ET que je suis le lecteur
         if (!inLobby && currentReaderId === MY_ID) {
             deck.style.cursor = 'pointer';
             deck.style.opacity = '1';
             deck.onclick = startCardDraw;
             
-            // Notification pour guider le joueur
             const alivePlayers = players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
             if (alivePlayers.length < 3) {
                 showNotification("⏳ En attente d'autres joueurs pour piocher...");
@@ -1006,7 +1003,6 @@ function prepareNextTurn() {
                 showNotification("🃏 C'est ton tour de piocher !");
             }
         } else {
-            // Sinon, le deck est visuellement désactivé
             deck.style.cursor = 'default';
             deck.style.opacity = '0.6';
             deck.onclick = null;
@@ -1068,6 +1064,7 @@ window.addEventListener('resize', () => {
         restorePointers();
     }
 });
+
 function renderPlayers(radiusScale = 1, centerTargetId = null) {
     const table = document.getElementById('table');
     const w = table.clientWidth || 480;
@@ -1100,9 +1097,11 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
             playerDiv.className = 'player';
             playerDiv.id = `player-${p.id}`;
             playerDiv.onclick = () => handleVoteClick(p.id);
+            // NOUVEAU : Ajout du bouton Poke dans le template HTML
             playerDiv.innerHTML = `
                 <div class="pointer" id="pointer-${p.id}"></div>
                 <div class="avatar" id="avatar-${p.id}">${p.avatar}</div>
+                <button class="btn-poke hidden" id="poke-btn-${p.id}" onclick="event.stopPropagation(); sendPoke()">👉 Poke</button>
                 <div class="player-name">${p.name}</div>
                 <div class="player-stack" id="stack-${p.id}" onclick="event.stopPropagation(); showPlayerCards('${p.id}')"></div>
             `;
@@ -2000,4 +1999,70 @@ function renderEndgameCardsSummary(winnerOrWinners) {
         `;
         list.appendChild(row);
     });
+}
+
+// =========================================================
+// SYSTÈME DE POKE (Anti-AFK)
+// =========================================================
+
+socket.on('poke_enabled', (data) => {
+    // On n'affiche le bouton que si on n'est PAS le lecteur visé
+    if (MY_ID !== data.readerId) {
+        const pokeBtn = document.getElementById(`poke-btn-${data.readerId}`);
+        if (pokeBtn) pokeBtn.classList.remove('hidden');
+    }
+});
+
+socket.on('execute_poke', (data) => {
+    // Séquence l'animation pour éviter les conflits visuels
+    enqueueAnimation(async () => {
+        await playPokeAnimation(data.senderId, data.targetId);
+    });
+});
+
+function sendPoke() {
+    audioManager.playSound('ui-click');
+    // On cache immédiatement tous les boutons pour éviter le spam
+    document.querySelectorAll('.btn-poke').forEach(btn => btn.classList.add('hidden'));
+    socket.emit('trigger_poke', currentRoomCode);
+}
+
+async function playPokeAnimation(senderId, targetId) {
+    const sender = players.find(p => p.id === senderId);
+    const target = players.find(p => p.id === targetId);
+    if (!sender || !target) return;
+
+    const table = document.getElementById('table');
+
+    // 1. Création du doigt
+    const finger = document.createElement('div');
+    finger.innerText = '👉';
+    finger.className = 'poke-finger';
+    // Position de départ (l'envoyeur)
+    finger.style.left = `${sender.centerX - 15}px`;
+    finger.style.top = `${sender.centerY - 15}px`;
+    table.appendChild(finger);
+
+    // Délai vital pour que le navigateur comprenne la position de départ
+    await sleep(50);
+
+    // 2. Déplacement vers la cible (le lecteur)
+    finger.style.left = `${target.centerX - 15}px`;
+    finger.style.top = `${target.centerY - 15}px`;
+
+    // On attend la durée de la transition CSS (400ms)
+    await sleep(400);
+
+    // 3. Impact
+    audioManager.playSound('ui-click'); // Tu pourras changer par un son 'boing' plus tard si tu veux
+    const targetAvatar = document.getElementById(`avatar-${targetId}`);
+    if (targetAvatar) {
+        targetAvatar.classList.add('avatar-squash');
+        setTimeout(() => targetAvatar.classList.remove('avatar-squash'), 300);
+    }
+
+    // 4. Nettoyage
+    finger.style.opacity = '0';
+    await sleep(200);
+    finger.remove();
 }
