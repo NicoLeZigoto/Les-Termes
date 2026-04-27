@@ -14,6 +14,7 @@ const cartesJSON =[
     { category: "TRASH", text: "Qui a l'air le plus con sur ses photos ?", comments:["Même Google a refusé de catégoriser $pseudo dans 'humains'"] },
     { category: "TRASH", text: "Qui ferait le pire président ?", comments:["Kim Jong-Un fait moins peur que $pseudo avec du pouvoir"] },
     { category: "TRASH", text: "Qui aurait grandement besoin d'une muselière au vu des atrocités qui sortent de sa bouche au quotidien ?", comments:["Un jour tes mots vont te rattraper $pseudo. Et on verra si tu cours vite..."] },
+    { category: "TRASH", text: "Qui aurait collaboré avec la nazis ?", comments:["La loyauté de $pseudo a un prix, et il est étonnamment bas.", "Sérieusement, ne lui racontez JAMAIS de secrets."] },
 
 
     // ==========================================
@@ -63,17 +64,19 @@ const cartesJSON =[
     { category: "SEXE", text: "Qui regarde BEAUCOUP TROP de contenus +18 ?", comments: ["Les nichons sont temporaires. Il faut sauver Gotham City !"] },
     { category: "SEXE", text: "Qui est le plus susceptible de cacher un compte Pornhub Premium ici ?", comments:["Everyone Knows That... Ulterior Motives... TELL ME THE TRUUUUTH"] },
     { category: "SEXE", text: "Qui pourait mater sa voisine d'en face au travers de son rideau sans qu'elle le sache ?", comments: ["$pseudo a toujours préféré aux voisins les voisines."] },
+    { category: "SEXE", text: "Qui possède un sextoy bien caché pour combler le vide de sa vie sentimentale ?", comments:[ "Appuie là."] },
 
     // ==========================================
     // ARGENT
     // ==========================================
     { category: "ARGENT", text: "Qui est capable de réclamer un virement Lydia de 50 centimes ?", comments:["SALE JUIF.", "50 centimes par jour ça fait quand même 182,5€ sur 1 an, radin mais malin !"] },
-    { category: "ARGENT", text: "Qui pourrait vendre les cadeaux de Noël qu'on lui offre sur Vinted ?", comments:["Le capitalisme est fier de toi $pseudo."] },
+    { category: "ARGENT", text: "Qui pourrait vendre les cadeaux de Noël qu'on lui offre sur Vinted ?", comments:["Cadeau... De Nöel."] },
     { category: "ARGENT", text: "Qui 'oublie' toujours son portefeuille au moment de payer l'addition ?", comments:["L'amnésie sélective de $pseudo frappe encore."] },
     { category: "ARGENT", text: "Qui mourrait sans Fast Food ?", comments: ["Le sang de $pseudo c'est 80% de sauce Big Mac"] },
     { category: "ARGENT", text: "Qui emprunte de l'argent sans jamais rembourser ?", comments: ["Depuis son séjour à Tel-Aviv, $pseudo est un nouvel homme"] },
     { category: "ARGENT", text: "Qui pleure d'être dans le rouge le 8 du mois... pour aller acheter des fringues à 150 balles le 9 ?", comments:["Le banquier de $pseudo est actuellement en réanimation.", "C'est beau le style, au moins tu auras le flow quand tu feras la manche, mon gars."] },
-
+    { category: "ARGENT", text: "Qui possède une collection bien trop importante de figurines, jouets ou peluches, alors qu'il a clairement passé l'âge socialement acceptable ?", comments:["Constate la tristesse de ta jeunesse !", "« ACHÈTE MA MERDE !! »"] },
+   
     // ==========================================
     // WTF
     // ==========================================
@@ -103,6 +106,7 @@ const cartesJSON =[
     { category: "QUOTIDIEN", text: "Qui répond 'ça va' alors que clairement ça va pas ?", comments:["Franchement j'aurais pu y croire si y'avait aucune corde autour de ton cou"] },
     { category: "QUOTIDIEN", text: "Qui mérite la palme d'or de la pire fausse excuse éclatée pour ne jamais venir à une de nos soirées ?", comments:["« Désolé j'ai aquaponey », vraiment ? La prochaine fois $pseudo assume juste que tu préfères ta console à notre amitié."] },
     { category: "QUOTIDIEN", text: "Qui ne va JAMAIS se remettre en question même s'il accumule 500 cartes à ce jeu ?", comments:["Regarde-toi un jour dans le miroir $pseudo. Et va lire Toltèque aussi."] },
+    { category: "QUOTIDIEN", text: "Qui prend absolument TOUT au premier degré ?", comments:["Il l'a."] },
 
     // ==========================================
     // EGO
@@ -121,6 +125,7 @@ const cartesJSON =[
     { category: "EGO", text: "Qui se vante d'être un 'go muscu' alors que son abonnement à la salle est le moins bien rentabilisé de l'Histoire ?", comments:["Mon frère ici présent ne va pas souvent à la salle..."] },
     { category: "EGO", text: "Qui corrige toujours ton français comme s'il était prof ?", comments:["On ne dit pas 'fils A pute', bon bah voilà c'est pareil !"] },
     { category: "EGO", text: "Qui est la plus grosse victime ?", comments:["Une fois j'ai vu $pseudo s'excuser auprès du trottoir."] },
+    { category: "EGO", text: "Si on lui donnait les pleins pouvoirs mondiaux, qui deviendrait un véritable tyran au bout de deux heures seulement ?", comments:["Donnez du pouvoir à un homme, et vous verrez sa vraie nature se révéler" ] },
 
     // ==========================================
     // STYLE
@@ -139,6 +144,8 @@ const cartesJSON =[
     { category: "SURVIE", text: "Qui pourrait manger n'importe quoi du moment que ça se digère ?", comments:["$pseudo mange même des planètes et des émotions", "J'suis dans la cuisine, tu boufferas évidemment c'que j'te prépare"] },
     { category: "SURVIE", text: "Qui est le moins sportif ?", comments:["Non $pseudo, bouger ton gros cul jusqu'au frigo c'est pas du sport…"] },
     { category: "SURVIE", text: "S'il y avait un Battle Royale entre nous là tout de suite, qui se ferait fracasser en premier ?", comments: ["Non $pseudo, être bon aux jeux de combat va pas t'aider ici."] },
+    { category: "SURVIE", text: "Qui a le plus de chances de se faire racketter dans une ruelle sombre ?", comments:["Tu veux mourrir ou quoi ?", "J'ai entendu 'Fils de pute va.'"] },
+    { category: "SURVIE", text: "En cas de grosse galère en plein milieu de la nuit, qui serait vraiment la DERNIÈRE personne à appeler ?", comments:["« Ah ouais c'est chaud ton truc... Bon, je te laisse, ma game commence. »"] },
 
     // ==========================================
     // BOULOT
@@ -149,7 +156,6 @@ const cartesJSON =[
     { category: "BOULOT", text: "Qui dépense tout son salaire dès le 3 du mois ?", comments: ["Le banquier de $pseudo fait des cauchemars."] },
     { category: "BOULOT", text: "Qui pourrait complètement se la couler douce au chômage ?", comments: ["Fais des gosses $pseudo, ça rapporte gros !"] },
     { category: "BOULOT", text: "Qui enverrait un mail à son boss bourré ?", comments:["Objet : 'AUGMENTATION OU JE ME CASSE'. Envoyé à 2h37, Regretté à 8h00", "Et c'est une fin de carrière pour $pseudo"] }
-
 ];
 
 
