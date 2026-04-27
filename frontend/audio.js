@@ -138,7 +138,7 @@ audioManager.loadSound('countdown_clock', 'sounds/countdown_clock.mp3');
 audioManager.loadSound('crypt_door', 'sounds/crypt_door.mp3');
 audioManager.loadSound('plastic_snap', 'sounds/plastic_snap.mp3');
 audioManager.loadSound('select_beep', 'sounds/select_beep.mp3');
-audioManager.loadSound('short_spark', 'sounds/short_spark.mp3');
+//audioManager.loadSound('short_spark', 'sounds/short_spark.mp3');
 audioManager.loadSound('sparkle', 'sounds/sparkle.mp3');
 audioManager.loadSound('ui_confirm', 'sounds/ui_confirm.mp3');
 audioManager.loadSound('ui_fail', 'sounds/ui_fail.mp3');

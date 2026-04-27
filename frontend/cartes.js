@@ -155,7 +155,7 @@ const cartesJSON =[
     { category: "SURVIE", text: "Qui est le moins sportif ?", comments:["Non $pseudo, bouger ton gros cul jusqu'au frigo c'est pas du sport…"] },
     { category: "SURVIE", text: "S'il y avait un Battle Royale entre nous là tout de suite, qui se ferait fracasser en premier ?", comments: ["Non $pseudo, être bon aux jeux de combat va pas t'aider ici."] },
     { category: "SURVIE", text: "Qui a le plus de chances de se faire racketter dans une ruelle sombre ?", comments:["Tu veux mourrir ou quoi ?", "J'ai entendu 'Fils de pute va.'"] },
-    { category: "SURVIE", text: "En cas de grosse galère en plein milieu de la nuit, qui serait vraiment la DERNIÈRE personne à appeler ?", comments:["« Ah ouais c'est chaud ton truc... Bon, je te laisse, ma game commence. »"] },
+    { category: "SURVIE", text: "En cas d'urgence à 3h du mat, qui faut-il SURTOUT PAS appeler ?", comments:["« Ah ouais c'est chaud ton truc... Bon, je te laisse, ma game commence. »"] },
 
     // ==========================================
     // BOULOT
