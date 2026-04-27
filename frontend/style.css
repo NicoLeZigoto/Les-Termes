@@ -774,7 +774,8 @@
       .player-stack { position: absolute; left: 72px; top: 0; width: 32px; height: 44px; cursor: pointer; z-index: 35; }
       .player-stack:empty { display: none; }
       
-     .mini-card { position: absolute; width: 28px; height: 40px; border-radius: 4px; border: 1.5px solid #2e4060; background-image: var(--card-back-image); background-color: #1a2a3a; background-size: cover; background-repeat: no-repeat; background-position: center; box-shadow: 1px 1px 4px rgba(0,0,0,0.6); transition: transform 0.2s ease; overflow: hidden; }
+     .mini-card { position: absolute; width: 28px; height: 40px; border-radius: 4px; border: 1.5px solid #2e4060; background-color: #1a2a3a; box-shadow: 1px 1px 4px rgba(0,0,0,0.6); transition: transform 0.2s ease; overflow: hidden; }
+      .mini-card-img { width: 100%; height: 100%; object-fit: fill; display: block; border-radius: 3px; }
       .mini-card::before, .mini-card::after { display: none; }
       
       .stack-count { position: absolute; bottom: -8px; right: -8px; background: #d42b2b; color: #f0ece4; border-radius: 50%; font-size: 0.7rem; font-weight: bold; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 2px solid #1a2a3a; z-index: 5; }

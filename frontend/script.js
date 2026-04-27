@@ -365,6 +365,16 @@ socket.on('game_reset_state', (data) => {
     isVoting = false;
     window._myVoteValidated = false;
     window._pendingVoteTarget = null;
+
+    // Nettoyage des effets de stress résiduels
+    audioManager.stopSound('heartbeat');
+    document.body.classList.remove('urgent-flash');
+
+    // Purge le texte de l'ancienne carte pour éviter le flash fantôme
+    const cardCategory = document.getElementById('card-category');
+    const cardText = document.getElementById('card-text');
+    if (cardCategory) cardCategory.innerText = '';
+    if (cardText) cardText.innerText = '';
     
     document.getElementById('cemetery-count').innerText = "0";
     document.getElementById('cemetery-cards').innerHTML = "<p class='cemetery-empty'>Aucune carte brûlée pour l'instant...</p>";
@@ -636,6 +646,12 @@ function validateMyVote() {
     document.getElementById('btn-validate').classList.add('hidden');
     document.body.classList.remove('urgent-flash');
 
+    const notReaderText = document.getElementById('not-reader-text');
+    if (notReaderText) {
+        notReaderText.innerText = "✅ En attente du vote des autres joueurs...";
+        notReaderText.classList.remove('hidden');
+    }
+
     socket.emit('cast_vote', { roomCode: currentRoomCode, targetId });
 }
 
@@ -840,6 +856,10 @@ socket.on('next_round', (data) => {
 });
 
 socket.on('game_over', (data) => {
+    // Nettoyage immédiat des effets de stress (heartbeat peut rester actif si fin pendant vote)
+    audioManager.stopSound('heartbeat');
+    document.body.classList.remove('urgent-flash');
+
     enqueueAnimation(async () => {
         players = data.players;
 
@@ -1733,13 +1753,21 @@ function initLobbyUI() {
     const pointsInput = document.getElementById('input-points');
     if (pointsInput) {
         pointsInput.addEventListener('keydown', e => {
-            if (['e', 'E', '-', '+', '.'].includes(e.key)) e.preventDefault();
+            // Autoriser : chiffres (0-9), touches de contrôle (Backspace, Delete, Tab, Arrows, Home, End)
+            const isDigit = e.key >= '0' && e.key <= '9';
+            const isControl = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key);
+            if (!isDigit && !isControl) e.preventDefault();
         });
         pointsInput.addEventListener('input', () => {
             let v = parseInt(pointsInput.value);
-            if (isNaN(v)) return; // laisser l'utilisateur finir de taper
+            if (isNaN(v)) return;
             if (v > 15) pointsInput.value = 15;
             if (v < 1) pointsInput.value = 2;
+        });
+        pointsInput.addEventListener('blur', () => {
+            let v = parseInt(pointsInput.value);
+            if (isNaN(v) || v < 2) pointsInput.value = 2;
+            if (v > 15) pointsInput.value = 15;
         });
     }
 
@@ -1817,12 +1845,18 @@ function updatePlayerStack(player, animate = false) {
     if (count === 0) { stack.innerHTML = ''; return; }
     const visible = Math.min(count, 4);
     stack.innerHTML = '';
+    const currentSkin = getCurrentCardSkin();
     for (let i = 0; i < visible; i++) {
         const mc = document.createElement('div');
         mc.className = 'mini-card' + (animate && i === visible - 1 ? ' new-card' : '');
         mc.style.top = `${(visible - 1 - i) * 2}px`;
         mc.style.left = `${(visible - 1 - i) * 1}px`;
         mc.style.zIndex = i;
+        const img = document.createElement('img');
+        img.src = currentSkin.image;
+        img.className = 'mini-card-img card-skin-image';
+        img.alt = '';
+        mc.appendChild(img);
         stack.appendChild(mc);
     }
     const badge = document.createElement('div');
