@@ -317,7 +317,6 @@ function startVotePhase(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     // Tick toutes les secondes pour synchronisation
     room.tickRef = setInterval(() => {
         remaining--;
-        room.timerRemaining = remaining; // Stocker pour la reconnexion
         io.to(roomCode).emit('timer_tick', { remaining });
 
         // Fast-forward : si tout le monde a voté
@@ -363,7 +362,7 @@ io.on('connection', (socket) => {
 
         rooms[roomCode] = {
             roomName: safeRoomName,
-            players: [{ ...playerData, id: socket.id, sessionId: playerData.sessionId || null, score: 0, afkCount: 0, isDead: false, isSpectator: false, wonCards: [] }], // Le créateur est joueur
+            players: [{ ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: false, wonCards: [] }], // Le créateur est joueur
             currentReaderId: socket.id,
             deck: [...deck],
             cemetery: [],
@@ -404,10 +403,9 @@ socket.on('join_room', (data) => {
         console.log(`✅ Timer de destruction annulé pour room ${roomCode} — nouveau joueur`);
     }
 
-    // Éviter les doublons (reconnexion rapide par socket ou par sessionId)
-    const existing = room.players.find(p => p.id === socket.id || (playerData.sessionId && p.sessionId === playerData.sessionId));
+    // Éviter les doublons (reconnexion rapide)
+    const existing = room.players.find(p => p.id === socket.id);
     if (existing) {
-        existing.id = socket.id; // Mettre à jour le socket.id si reconnexion par sessionId
         return socket.emit('room_joined', {
             roomCode,
             roomName: room.roomName,
@@ -420,7 +418,7 @@ socket.on('join_room', (data) => {
             isVoting: room.isVoting
         });
     }
-    const newPlayer = { ...playerData, id: socket.id, sessionId: playerData.sessionId || null, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
+    const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
     room.players.push(newPlayer);
     socket.join(roomCode);
 
@@ -689,104 +687,9 @@ socket.on('cast_vote', (data) => {
 
 
     socket.on('leave_room', (roomCode) => {
-        // Départ volontaire : on retire le joueur proprement + nettoie le grace timer s'il existe
-        const room = rooms[roomCode];
-        if (room) {
-            const player = room.players.find(p => p.id === socket.id);
-            if (player && player._graceTimer) {
-                clearTimeout(player._graceTimer);
-                player._graceTimer = null;
-            }
-        }
+        // Départ volontaire : on retire le joueur proprement
         handlePlayerDeparture(socket, roomCode);
         socket.leave(roomCode);
-    });
-
-    // ------ RECONNEXION (F5 / refresh) ------
-
-    socket.on('reconnect_me', ({ sessionId, roomCode }) => {
-        const room = rooms[roomCode];
-        if (!room) {
-            return socket.emit('reconnect_failed', { reason: 'room_not_found' });
-        }
-
-        const player = room.players.find(p => p.sessionId === sessionId);
-        if (!player) {
-            return socket.emit('reconnect_failed', { reason: 'player_not_found' });
-        }
-
-        // Annuler le délai de grâce
-        if (player._graceTimer) {
-            clearTimeout(player._graceTimer);
-            player._graceTimer = null;
-        }
-
-        const oldSocketId = player.id;
-
-        // Mettre à jour le socket.id du joueur
-        player.id = socket.id;
-        player.disconnected = false;
-
-        // Si c'était le lecteur, on met à jour currentReaderId
-        if (room.currentReaderId === oldSocketId) {
-            room.currentReaderId = socket.id;
-        }
-
-        // Migrer les votes émis par ce joueur (clé = voteur)
-        if (room.votes && room.votes[oldSocketId] !== undefined) {
-            room.votes[socket.id] = room.votes[oldSocketId];
-            delete room.votes[oldSocketId];
-        }
-
-        // Migrer les votes reçus par ce joueur (valeur = cible)
-        if (room.votes) {
-            for (const [voterId, targetId] of Object.entries(room.votes)) {
-                if (targetId === oldSocketId) {
-                    room.votes[voterId] = socket.id;
-                }
-            }
-        }
-
-        // Migrer les tieBreakCandidates et tieBreakExcluded
-        if (room.tieBreakCandidates) {
-            room.tieBreakCandidates = room.tieBreakCandidates.map(id => id === oldSocketId ? socket.id : id);
-        }
-        if (room.tieBreakExcluded) {
-            room.tieBreakExcluded = room.tieBreakExcluded.map(id => id === oldSocketId ? socket.id : id);
-        }
-
-        // Rejoindre la room socket
-        socket.join(roomCode);
-
-        // Envoyer l'état complet au joueur reconnecté
-        socket.emit('reconnect_success', {
-            roomCode,
-            roomName: room.roomName,
-            players: room.players,
-            currentReaderId: room.currentReaderId,
-            voteMode: room.voteMode,
-            scoreToWin: room.scoreToWin,
-            phase: room.phase,
-            currentCard: room.currentCard,
-            isVoting: room.isVoting,
-            timerRemaining: room.timerRemaining || 0,
-            tieBreakCandidates: room.tieBreakCandidates || [],
-            tieBreakExcluded: room.tieBreakExcluded || [],
-            mySessionId: sessionId,
-            cemetery: room.cemetery || []
-        });
-
-        // Notifier les autres joueurs de la reconnexion
-        socket.to(roomCode).emit('player_reconnected', {
-            playerId: socket.id,
-            playerName: player.name,
-            players: room.players
-        });
-
-        // Mise à jour de tous les clients (le socket.id a changé, les pointeurs doivent être mis à jour)
-        io.to(roomCode).emit('update_players', { players: room.players, currentReaderId: room.currentReaderId });
-
-        console.log(`🔄 ${player.name} reconnecté dans room ${roomCode} (ancien: ${oldSocketId}, nouveau: ${socket.id})`);
     });
     
     socket.on('disconnect', () => {
@@ -804,73 +707,54 @@ socket.on('cast_vote', (data) => {
                 break;
             }
 
-            // En jeu : délai de grâce de 15 secondes avant de considérer le joueur comme mort
-            console.log(`⏳ Délai de grâce pour ${player.name} dans room ${roomCode}...`);
+            // En jeu : on marque le joueur comme mort/déconnecté sans le supprimer
+            player.isDead = true;
             player.disconnected = true;
 
-            // Notifier les autres qu'il est "en cours de reconnexion"
-            io.to(roomCode).emit('player_reconnecting', {
+            io.to(roomCode).emit('player_disconnected', {
                 playerId: socket.id,
                 playerName: player.name,
                 players: room.players
             });
 
-            player._graceTimer = setTimeout(() => {
-                // Vérifier que le joueur n'est pas revenu entre temps
-                const currentPlayer = room.players.find(p => p.sessionId === player.sessionId);
-                if (!currentPlayer || !currentPlayer.disconnected) return;
+            // Passer le flambeau si c'était le lecteur
+            if (room.currentReaderId === socket.id) {
+                const currentIndex = room.players.findIndex(p => p.id === socket.id);
+                let nextReader = null;
 
-                console.log(`💀 Délai de grâce expiré pour ${player.name} dans room ${roomCode}`);
-
-                // On marque le joueur comme mort/déconnecté définitivement
-                currentPlayer.isDead = true;
-
-                io.to(roomCode).emit('player_disconnected', {
-                    playerId: currentPlayer.id,
-                    playerName: currentPlayer.name,
-                    players: room.players
-                });
-
-                // Passer le flambeau si c'était le lecteur
-                if (room.currentReaderId === currentPlayer.id) {
-                    const currentIndex = room.players.findIndex(p => p.id === currentPlayer.id);
-                    let nextReader = null;
-
-                    for (let i = 1; i < room.players.length; i++) {
-                        const checkIndex = (currentIndex + i) % room.players.length;
-                        const p = room.players[checkIndex];
-                        if (!p.isDead && !p.disconnected && !p.isSpectator) {
-                            nextReader = p;
-                            break;
-                        }
-                    }
-
-                    if (nextReader) {
-                        room.currentReaderId = nextReader.id;
-
-                        if (room.phase === 'reading' || room.phase === 'drawing') {
-                            room.phase = 'drawing';
-                            if (room.pendingCards) {
-                                room.deck.push(...room.pendingCards);
-                                room.pendingCards = null;
-                            }
-                        }
-
-                        io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
+                for (let i = 1; i < room.players.length; i++) {
+                    const checkIndex = (currentIndex + i) % room.players.length;
+                    const p = room.players[checkIndex];
+                    if (!p.isDead && !p.disconnected && !p.isSpectator) {
+                        nextReader = p;
+                        break;
                     }
                 }
 
-                // Vérifier si la partie doit s'arrêter
-                const alive = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
-                if (alive.length <= 2 && room.phase !== 'lobby') {
-                    clearTimer(room);
-                    if (alive.length > 0) {
-                        const winner = alive.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-                        io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
-                    }
-                }
-            }, 15000); // 15 secondes de délai de grâce
+                if (nextReader) {
+                    room.currentReaderId = nextReader.id;
 
+                    if (room.phase === 'reading' || room.phase === 'drawing') {
+                        room.phase = 'drawing';
+                        if (room.pendingCards) {
+                            room.deck.push(...room.pendingCards);
+                            room.pendingCards = null;
+                        }
+                    }
+
+                    io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
+                }
+            }
+
+            // Vérifier si la partie doit s'arrêter
+            const alive = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
+            if (alive.length <= 2 && room.phase !== 'lobby') {
+                clearTimer(room);
+                if (alive.length > 0) {
+                    const winner = alive.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+                    io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
+                }
+            }
             break;
         }
     });
