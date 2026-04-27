@@ -119,6 +119,33 @@ function clearTimer(room) {
     }
 }
 
+/**
+ * Détermine le(s) gagnant(s) parmi une liste de joueurs et émet game_over.
+ * Gère correctement les égalités (plusieurs joueurs avec le même score max).
+ */
+function emitGameOver(roomCode, candidates) {
+    const room = rooms[roomCode];
+    if (!room || !candidates.length) return;
+
+    const maxScore = Math.max(...candidates.map(p => p.score));
+    const winners = candidates.filter(p => p.score === maxScore);
+
+    if (winners.length === 1) {
+        io.to(roomCode).emit('game_over', {
+            winnerId: winners[0].id,
+            winnerIds: [winners[0].id],
+            players: room.players
+        });
+    } else {
+        // Égalité entre plusieurs joueurs
+        io.to(roomCode).emit('game_over', {
+            winnerId: null,
+            winnerIds: winners.map(w => w.id),
+            players: room.players
+        });
+    }
+}
+
 // =========================================================
 // RÉSOLUTION D'UN TOUR (appelée par le serveur uniquement)
 // =========================================================
@@ -161,8 +188,7 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
         const aliveAfterAfk = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
         if (aliveAfterAfk.length <= 2) {
             if (aliveAfterAfk.length > 0) {
-                const winner = aliveAfterAfk.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-                io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
+                emitGameOver(roomCode, aliveAfterAfk);
             }
             return;
         }
@@ -751,8 +777,7 @@ socket.on('cast_vote', (data) => {
             if (alive.length <= 2 && room.phase !== 'lobby') {
                 clearTimer(room);
                 if (alive.length > 0) {
-                    const winner = alive.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-                    io.to(roomCode).emit('game_over', { winnerId: winner.id, players: room.players });
+                    emitGameOver(roomCode, alive);
                 }
             }
             break;

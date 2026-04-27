@@ -54,6 +54,7 @@ const cartesJSON =[
     { category: "LOVE", text: "Qui tomberait amoureux d'une IA ?", comments:["$pseudo a déjà dit 'merci' à Siri... Il a dit MERCI !.."] },
     { category: "LOVE", text: "Qui reste ami(e) avec son ex dans l'espoir d'avoir une deuxième chance ?", comments:["J'ai presque de la peine pour toi $pseudo. Presque."] },
     { category: "LOVE", text: "Qui est le moins fidèle en couple ?", comments:["J'ai la solution $pseudo. Il faut que tu te branles énormément."] },
+    { category: "LOVE", text: "Qui jure qu'il a des grands standards moraux, jusqu'à ce qu'une meuf lui montre un bout de sein ?", comments:["Où est donc passée la solidité supposée du roseau $pseudo ?"] },
     
     // ==========================================
     // SEXE
@@ -134,6 +135,7 @@ const cartesJSON =[
     { category: "EGO", text: "Qui est la plus grosse victime ?", comments:["Une fois j'ai vu $pseudo s'excuser auprès du trottoir."] },
     { category: "EGO", text: "Si on lui donnait les pleins pouvoirs mondiaux, qui deviendrait un véritable tyran au bout de deux heures seulement ?", comments:["Donnez du pouvoir à un homme, et vous verrez sa vraie nature se révéler" ] },
     { category: "EGO", text: "Qui se vexe pour tout, extrapole chaque situation, et s'invente des guerres avec des gens qui ne s'intéressent même pas à lui ?", comments:["Tu connais les « 4 Accords Toltèques » $pseudo ?"] },
+    { category: "EGO", text: "Qui passe ses journées à faire des grandes déclarations d'intention et des promesses de fou, mais disparaît complètement quand il faut agir concrètement ?", comments:["Les médecins sont formels : $pseudo n'a QUE de la boca.", "$pseudo : El Rei Delaboca !"] },
 
     // ==========================================
     // STYLE

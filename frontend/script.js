@@ -840,8 +840,18 @@ socket.on('next_round', (data) => {
 socket.on('game_over', (data) => {
     enqueueAnimation(async () => {
         players = data.players;
-        const winner = players.find(p => p.id === data.winnerId);
-        if (winner) showVictory(winner);
+
+        // Cas égalité : le serveur envoie winnerIds avec plusieurs IDs et winnerId = null
+        const winnerIds = data.winnerIds || (data.winnerId ? [data.winnerId] : []);
+        const winners = winnerIds.map(id => players.find(p => p.id === id)).filter(Boolean);
+
+        if (winners.length === 0) return; // Sécurité : ne rien afficher si aucun gagnant résolu
+
+        if (winners.length === 1) {
+            showVictory(winners[0]);
+        } else {
+            showTie(winners);
+        }
     });
 });
 
@@ -1501,7 +1511,7 @@ function endGameBecauseDeckIsEmpty() {
     document.getElementById('victory-title').innerHTML = "🃏 DECK VIDE 🃏";
     document.getElementById('victory-message').innerHTML = `Égalité entre ${winners.map(p => `${p.avatar} <strong>${p.name}</strong>`).join(', ')} avec ${bestScore} point${bestScore > 1 ? 's' : ''}.`;
     renderRivalrySummary();
-    renderEndgameCardsSummary(winners[0]);
+    renderEndgameCardsSummary(winners);
     overlay.classList.remove('hidden');
 }
 
@@ -1521,6 +1531,29 @@ function showVictory(winner) {
     document.getElementById('victory-message').innerHTML = `<strong>${winner.name}</strong> remporte la partie avec ${winner.score} points !`;
     renderRivalrySummary();
     renderEndgameCardsSummary(winner);
+    document.getElementById('victory-overlay').classList.remove('hidden');
+}
+
+function showTie(winners) {
+    audioManager.stopMusic();
+    audioManager.playSound('victory');
+
+    const myPlayer = players.find(p => p.id === MY_ID);
+    const replayBtn = document.querySelector('#victory-overlay .btn-primary');
+    if (myPlayer && myPlayer.isSpectator) {
+        replayBtn.innerText = "Rejoindre";
+    } else {
+        replayBtn.innerText = "Rejouer";
+    }
+
+    const score = winners[0].score;
+    const names = winners.map(w => `${w.avatar} <strong>${w.name}</strong>`).join(', ');
+
+    document.getElementById('victory-title').innerHTML = `⚖️ ÉGALITÉ ⚖️`;
+    document.getElementById('victory-message').innerHTML =
+        `${names} terminent à égalité avec ${score} point${score > 1 ? 's' : ''} chacun.`;
+    renderRivalrySummary();
+    renderEndgameCardsSummary(winners[0]);
     document.getElementById('victory-overlay').classList.remove('hidden');
 }
 
@@ -1888,21 +1921,29 @@ function renderRivalrySummary() {
     `;
 }
 
-function renderEndgameCardsSummary(winner) {
+function renderEndgameCardsSummary(winnerOrWinners) {
     const container = document.getElementById('endgame-cards-summary');
     if (!container) return;
-    const sorted = [winner, ...players.filter(p => p.id !== winner.id)];
+    // Accepte un joueur unique ou un tableau de gagnants (cas égalité)
+    const winnerIds = Array.isArray(winnerOrWinners)
+        ? winnerOrWinners.map(w => w.id)
+        : [winnerOrWinners.id];
+    const sorted = [
+        ...players.filter(p => winnerIds.includes(p.id)),
+        ...players.filter(p => !winnerIds.includes(p.id))
+    ];
     container.innerHTML = `<h3 class="victory-section-title">🃏 Résumé des cartes</h3><div class="endgame-players-list"></div>`;
     const list = container.querySelector('.endgame-players-list');
     sorted.forEach((player, index) => {
+        const isWinner = winnerIds.includes(player.id);
         const row = document.createElement('div');
-        row.className = `endgame-player-row${index === 0 ? ' winner-row' : ''}`;
+        row.className = `endgame-player-row${isWinner ? ' winner-row' : ''}`;
         const cardsHTML = player.wonCards.length
             ? player.wonCards.map(c => `<div class="endgame-card"><p class="card-category"># ${c.category}</p><p class="endgame-card-text">${c.text}</p></div>`).join('')
             : `<p class="endgame-empty">Aucune carte gagnée.</p>`;
         row.innerHTML = `
             <div class="endgame-player-head">
-                <div class="endgame-player-name">${player.avatar} ${player.name}${index === 0 ? ' 👑' : ''}</div>
+                <div class="endgame-player-name">${player.avatar} ${player.name}${isWinner ? (winnerIds.length > 1 ? ' ⚖️' : ' 👑') : ''}</div>
                 <div class="endgame-player-score">${player.score} point${player.score > 1 ? 's' : ''}</div>
             </div>
             <div class="endgame-cards-row">${cardsHTML}</div>
