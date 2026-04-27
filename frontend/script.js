@@ -3,7 +3,9 @@
 // =========================================================
 
 function goToIdentity() {
+    audioManager.playMusic('lobby');
     audioManager.playSound('ui-click');
+    
     document.getElementById('step-home').classList.add('hidden');
     document.getElementById('step-identity').classList.remove('hidden');
 }
@@ -288,8 +290,6 @@ socket.on('update_players', (data) => {
 socket.on('error_msg', (msg) => showNotification(msg));
 
 function enterGame(phase = 'lobby') {
-    audioManager.stopMusic();
-    audioManager.playMusic('game', { volume: 0.02 });
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('game-wrapper').classList.remove('hidden');
     updateCardSkinPickerVisibility();
@@ -298,6 +298,12 @@ function enterGame(phase = 'lobby') {
     window.history.pushState({}, '', `/${currentRoomCode}`);
     
     initRoomBadgeShare();
+
+    setTimeout(() => {
+        audioManager.stopMusic();
+        audioManager.playMusic('game', { volume: 0.02 });
+    }, 400);
+
     setTimeout(() => {
         renderPlayers();
         
@@ -1368,9 +1374,17 @@ async function animHumiliation(player) {
         tears.push(tear);
     }, 200);
 
+    let laughSoundTick = 0;
+
     let laughInterval = setInterval(() => {
         const laughers = players.filter(p => p.id !== player.id && !p.isDead);
         if (!laughers.length) return;
+        
+        if (laughSoundTick % 3 === 0) {
+            audioManager.playSound('laugh-sound'); 
+        }
+        laughSoundTick++;
+
         const laugher = laughers[Math.floor(Math.random() * laughers.length)];
         const haha = document.createElement('div');
         haha.innerText = ['HAHA!', '😂'][Math.floor(Math.random() * 2)];
@@ -1634,6 +1648,8 @@ function endGameBecauseDeckIsEmpty() {
     const bestScore = Math.max(...contenders.map(p => p.score));
     const winners = contenders.filter(p => p.score === bestScore);
 
+    audioManager.playSound('deck-empty');
+
     if (winners.length === 1) {
         showNotification("🃏 Plus de cartes disponibles : fin de partie !");
         showVictory(winners[0]);
@@ -1641,6 +1657,10 @@ function endGameBecauseDeckIsEmpty() {
         if (msg) msg.innerHTML = `${winners[0].avatar} <strong>${winners[0].name}</strong> remporte la partie : le deck est vide.`;
         return;
     }
+    
+    audioManager.stopMusic();
+    audioManager.playSound('victory');
+
     const overlay = document.getElementById('victory-overlay');
     document.getElementById('victory-title').innerHTML = "🃏 DECK VIDE 🃏";
     document.getElementById('victory-message').innerHTML = `Égalité entre ${winners.map(p => `${p.avatar} <strong>${p.name}</strong>`).join(', ')} avec ${bestScore} point${bestScore > 1 ? 's' : ''}.`;
@@ -1827,9 +1847,13 @@ function updateVolumeLabel(id, value) {
 function applyVolumes() {
     // Communique avec audio.js
     if (typeof audioManager !== 'undefined') {
-        if (typeof audioManager.setGlobalVolume === 'function') audioManager.setGlobalVolume(gameVolumes.global);
-        if (typeof audioManager.setMusicVolume === 'function') audioManager.setMusicVolume(gameVolumes.music);
-        if (typeof audioManager.setSfxVolume === 'function') audioManager.setSfxVolume(gameVolumes.sfx);
+        const globalVol = gameVolumes.global;
+        const effectiveMusicVol = gameVolumes.music * globalVol;
+        const effectiveSfxVol = gameVolumes.sfx * globalVol;
+
+        if (typeof audioManager.setGlobalVolume === 'function') audioManager.setGlobalVolume(globalVol);
+        if (typeof audioManager.setMusicVolume === 'function') audioManager.setMusicVolume(effectiveMusicVol);
+        if (typeof audioManager.setSfxVolume === 'function') audioManager.setSfxVolume(effectiveSfxVol);
     }
 }
 
@@ -1849,14 +1873,13 @@ function closeVolumeMenu() {
 
 
 function initLobbyUI() {
-    initVolume(); // <--- À AJOUTER ICI
-    audioManager.playMusic('lobby');
+    initVolume(); 
+    // CORRECTION BUG 1 : Suppression de audioManager.playMusic('lobby') ici pour éviter le blocage Autoplay
     startIdentitySubtitleRotation();
     initCardSkinPicker();
 
     const pathCode = window.location.pathname.replace('/', '');
     if (pathCode.length === 4 && !isNaN(pathCode)) {
-
         document.getElementById('input-room-code').value = pathCode; 
         
         document.getElementById('step-home').classList.add('hidden');
@@ -1870,7 +1893,6 @@ function initLobbyUI() {
     const pointsInput = document.getElementById('input-points');
     if (pointsInput) {
         pointsInput.addEventListener('keydown', e => {
-            // Autoriser : chiffres (0-9), touches de contrôle (Backspace, Delete, Tab, Arrows, Home, End)
             const isDigit = e.key >= '0' && e.key <= '9';
             const isControl = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key);
             if (!isDigit && !isControl) e.preventDefault();
