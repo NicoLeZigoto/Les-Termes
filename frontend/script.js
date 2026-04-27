@@ -63,10 +63,13 @@ function executeBackToMenu() {
     // 1. On prévient le serveur qu'on part
     socket.emit('leave_room', currentRoomCode);
 
-    // 2. On nettoie l'URL (on revient à la racine)
+    // 2. Nettoyer le localStorage (départ volontaire)
+    clearSessionContext();
+
+    // 3. On nettoie l'URL (on revient à la racine)
     window.history.pushState({}, '', '/');
 
-    // 3. On réinitialise l'interface
+    // 4. On réinitialise l'interface
     document.getElementById('game-wrapper').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
     
@@ -75,7 +78,7 @@ function executeBackToMenu() {
     document.getElementById('step-identity').classList.add('hidden');
     document.getElementById('step-choose').classList.remove('hidden');
 
-    // 4. On vide les variables locales pour éviter les conflits au prochain join
+    // 5. On vide les variables locales pour éviter les conflits au prochain join
     currentRoomCode = "0000";
     players = [];
     currentCard = null;
@@ -130,6 +133,7 @@ const CARD_SKINS = [
 
 // ─── État local (lecture seule, tout vient du serveur) ───
 let MY_ID = "";
+let MY_SESSION_ID = "";
 let currentRoomCode = "0000";
 let players = [];
 let currentReaderId = "";
@@ -141,6 +145,31 @@ let voteStats = { againstMe: {}, byMe: {} };
 let isVoting = false;
 // Source de vérité unique pour la phase — synchronisée depuis le serveur
 let gamePhase = 'lobby';
+let isCountingDown = false;
+
+// =========================================================
+// SESSION PERSISTANTE — Survie au F5
+// =========================================================
+
+function getOrCreateSessionId() {
+    let sid = localStorage.getItem('lt-session-id');
+    if (!sid) {
+        sid = 'sid-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('lt-session-id', sid);
+    }
+    return sid;
+}
+
+function saveSessionContext(roomCode) {
+    localStorage.setItem('lt-room-code', roomCode);
+}
+
+function clearSessionContext() {
+    localStorage.removeItem('lt-room-code');
+    // On conserve le sessionId pour les futures parties
+}
+
+MY_SESSION_ID = getOrCreateSessionId();
 
 // File d'attente pour séquencer proprement les animations ---
 let cinematicQueue = Promise.resolve();
@@ -175,6 +204,13 @@ const socket = io();
 
 socket.on('connect', () => {
     MY_ID = socket.id;
+
+    // Tentative de reconnexion automatique après un F5
+    const savedRoom = localStorage.getItem('lt-room-code');
+    if (savedRoom && savedRoom !== '0000') {
+        console.log(`🔄 Tentative de reconnexion dans room ${savedRoom}...`);
+        socket.emit('reconnect_me', { sessionId: MY_SESSION_ID, roomCode: savedRoom });
+    }
 });
 
 // =========================================================
@@ -196,7 +232,7 @@ function createRoom() {
     }
 
     socket.emit('create_room', {
-        playerData: { name: pseudo, avatar: selectedAvatar },
+        playerData: { name: pseudo, avatar: selectedAvatar, sessionId: MY_SESSION_ID },
         roomName,
         scoreToWin,
         voteMode,
@@ -211,7 +247,7 @@ function joinRoom() {
 
     socket.emit('join_room', {
         roomCode: code,
-        playerData: { name: pseudo, avatar: selectedAvatar }
+        playerData: { name: pseudo, avatar: selectedAvatar, sessionId: MY_SESSION_ID }
     });
 }
 
@@ -225,6 +261,7 @@ socket.on('room_created', (data) => {
     GAME_VOTE_MODE = data.voteMode;
     gamePhase = 'lobby';
     document.getElementById('display-room-name').innerText = data.roomName;
+    saveSessionContext(data.roomCode);
     enterGame();
 });
 
@@ -242,6 +279,7 @@ socket.on('room_joined', (data) => {
         isVoting = data.isVoting;
     }
     
+    saveSessionContext(data.roomCode);
     enterGame(data.phase);
 });
 
@@ -856,7 +894,135 @@ socket.on('player_disconnected', (data) => {
     enqueueAnimation(async () => {
         players = data.players;
         renderPlayers();
-        showNotification(`💔 ${data.playerName} a quitté la partie !`);
+        showNotification(`💔 ${data.playerName} a quitté la partie définitivement !`);
+    });
+});
+
+// =========================================================
+// RECONNEXION — Gestion du F5
+// =========================================================
+
+socket.on('reconnect_success', (data) => {
+    // 1. Mettre à jour MY_ID avec le nouveau socket.id
+    MY_ID = socket.id;
+
+    // 2. Restaurer l'état global
+    currentRoomCode = data.roomCode;
+    players = data.players;
+    currentReaderId = data.currentReaderId;
+    SCORE_TO_WIN = data.scoreToWin;
+    GAME_VOTE_MODE = data.voteMode;
+    gamePhase = data.phase || 'lobby';
+    currentCard = data.currentCard || null;
+    isVoting = data.isVoting || false;
+    isCountingDown = false;
+
+    // 3. Restaurer le cimetière
+    cemetery = (data.cemetery || []).map((c, i) => ({ card: c, reason: 'Égalité', turn: i + 1 }));
+    document.getElementById('cemetery-count').innerText = cemetery.length;
+    renderCemetery();
+
+    // 4. Réinitialiser les flags de vote — le joueur doit pouvoir revoter
+    window._myVoteValidated = false;
+    window._pendingVoteTarget = null;
+    window._tieBreakCandidates = (data.tieBreakCandidates && data.tieBreakCandidates.length) ? data.tieBreakCandidates : null;
+    window._tieBreakExcluded = data.tieBreakExcluded || [];
+
+    // 5. Nettoyer le DOM de la table (les éléments avec les anciens socket.id)
+    document.querySelectorAll('#table .player').forEach(el => el.remove());
+
+    // 6. Afficher le nom de la room
+    document.getElementById('display-room-name').innerText = data.roomName || "La Room";
+    saveSessionContext(data.roomCode);
+
+    // 7. Entrer dans le jeu et reconstruire l'UI selon la phase
+    showNotification("🔄 Reconnexion réussie !");
+    enterGame(data.phase);
+
+    // 8. Si on était en plein vote, reconstruire l'UI de vote
+    if (data.isVoting && data.timerRemaining > 0) {
+        rebuildVoteUI(data);
+    }
+
+    console.log(`✅ Reconnecté dans room ${data.roomCode}, phase: ${data.phase}`);
+});
+
+// Reconstruit l'interface de vote après un F5 pendant une phase de vote
+function rebuildVoteUI(data) {
+    localTimer = data.timerRemaining;
+
+    const display = document.getElementById('timer-display');
+    if (display) {
+        display.classList.remove('hidden');
+        display.innerText = localTimer;
+        display.style.color = localTimer <= 5 ? 'red' : '#e74c3c';
+    }
+
+    // Masquer les boutons qui n'ont pas lieu d'être
+    document.getElementById('btn-start-vote').classList.add('hidden');
+    document.getElementById('btn-validate').classList.add('hidden');
+    document.getElementById('waiting-text').classList.add('hidden');
+
+    // Afficher la carte en cours
+    if (currentCard) {
+        document.getElementById('current-card').classList.remove('hidden');
+        document.getElementById('card-category').innerText = `# ${currentCard.category}`;
+        document.getElementById('card-text').innerText = currentCard.text;
+    }
+
+    // Afficher le texte de statut adapté au rôle
+    const notReaderText = document.getElementById('not-reader-text');
+    if (notReaderText) {
+        notReaderText.classList.remove('hidden');
+        const myPlayer = players.find(p => p.id === MY_ID);
+        const isTieBreak = !!(window._tieBreakCandidates && window._tieBreakCandidates.length);
+        const amExcluded = window._tieBreakExcluded && window._tieBreakExcluded.includes(MY_ID);
+
+        if (isTieBreak && amExcluded) {
+            notReaderText.innerHTML = "Tu es en train de te faire juger ! Attends le verdict...";
+        } else if (isTieBreak && window._tieBreakCandidates) {
+            const candidateNames = window._tieBreakCandidates.map(id => {
+                const p = players.find(pl => pl.id === id);
+                return p ? `<strong style="color:#e67e22">${p.name}</strong>` : '???';
+            });
+            notReaderText.innerHTML = `Tu dois départager ${candidateNames.join(' et ')} !`;
+        } else if (myPlayer && myPlayer.isSpectator) {
+            notReaderText.innerHTML = "👀 Tu es spectateur... observe les joueurs s'entretuer.";
+        } else if (myPlayer && myPlayer.isDead) {
+            notReaderText.innerHTML = "👻 Tu es mort... regarde les vivants s'entretuer.";
+        } else {
+            notReaderText.innerHTML = "À toi de voter !";
+        }
+    }
+
+    // Mettre en évidence les candidats tie-break
+    if (window._tieBreakCandidates) {
+        window._tieBreakCandidates.forEach(id => {
+            document.getElementById(`avatar-${id}`)?.classList.add('tie-candidate');
+        });
+    }
+}
+
+socket.on('reconnect_failed', (data) => {
+    // La room n'existe plus ou le joueur n'a pas été trouvé → nettoyer et aller au menu
+    console.warn('Reconnexion échouée :', data.reason);
+    clearSessionContext();
+    // L'UI reste sur le menu, rien à faire de plus
+});
+
+socket.on('player_reconnecting', (data) => {
+    enqueueAnimation(async () => {
+        players = data.players;
+        renderPlayers();
+        showNotification(`⏳ ${data.playerName} se reconnecte...`);
+    });
+});
+
+socket.on('player_reconnected', (data) => {
+    enqueueAnimation(async () => {
+        players = data.players;
+        renderPlayers();
+        showNotification(`✅ ${data.playerName} est de retour !`);
     });
 });
 
@@ -981,8 +1147,6 @@ function prepareNextTurn() {
         }
     }
 }
-
-let isCountingDown = false;
 
 // Le socket du compte à rebours est parfait ici
 socket.on('game_countdown', (data) => {
@@ -1612,71 +1776,7 @@ function startIdentitySubtitleRotation() {
     identitySubtitleInterval = true;
 }
 
-// =========================================================
-// GESTION DU VOLUME
-// =========================================================
-
-const VOLUME_STORAGE_KEY = 'les-termes-volume';
-let gameVolumes = { global: 1, music: 1, sfx: 1 };
-
-function initVolume() {
-    const stored = localStorage.getItem(VOLUME_STORAGE_KEY);
-    if (stored) {
-        try { gameVolumes = JSON.parse(stored); } catch(e) {}
-    }
-    
-    // Mettre à jour l'UI
-    const volGlobal = document.getElementById('vol-global');
-    const volMusic = document.getElementById('vol-music');
-    const volSfx = document.getElementById('vol-sfx');
-
-    if(volGlobal) volGlobal.value = gameVolumes.global;
-    if(volMusic) volMusic.value = gameVolumes.music;
-    if(volSfx) volSfx.value = gameVolumes.sfx;
-
-    updateVolumeLabel('val-global', gameVolumes.global);
-    updateVolumeLabel('val-music', gameVolumes.music);
-    updateVolumeLabel('val-sfx', gameVolumes.sfx);
-
-    applyVolumes();
-
-    // Listeners pour mettre à jour en temps réel
-    if(volGlobal) volGlobal.addEventListener('input', (e) => { gameVolumes.global = parseFloat(e.target.value); updateVolumeLabel('val-global', gameVolumes.global); applyVolumes(); saveVolumes(); });
-    if(volMusic) volMusic.addEventListener('input', (e) => { gameVolumes.music = parseFloat(e.target.value); updateVolumeLabel('val-music', gameVolumes.music); applyVolumes(); saveVolumes(); });
-    if(volSfx) volSfx.addEventListener('input', (e) => { gameVolumes.sfx = parseFloat(e.target.value); updateVolumeLabel('val-sfx', gameVolumes.sfx); applyVolumes(); saveVolumes(); });
-}
-
-function updateVolumeLabel(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.innerText = Math.round(value * 100) + '%';
-}
-
-function applyVolumes() {
-    // Communique avec audio.js
-    if (typeof audioManager !== 'undefined') {
-        if (typeof audioManager.setGlobalVolume === 'function') audioManager.setGlobalVolume(gameVolumes.global);
-        if (typeof audioManager.setMusicVolume === 'function') audioManager.setMusicVolume(gameVolumes.music);
-        if (typeof audioManager.setSfxVolume === 'function') audioManager.setSfxVolume(gameVolumes.sfx);
-    }
-}
-
-function saveVolumes() {
-    localStorage.setItem(VOLUME_STORAGE_KEY, JSON.stringify(gameVolumes));
-}
-
-function openVolumeMenu() {
-    audioManager.playSound('ui-click');
-    document.getElementById('volume-modal').classList.remove('hidden');
-}
-
-function closeVolumeMenu() {
-    audioManager.playSound('ui-click');
-    document.getElementById('volume-modal').classList.add('hidden');
-}
-
-
 function initLobbyUI() {
-    initVolume(); // <--- À AJOUTER ICI
     audioManager.playMusic('lobby');
     startIdentitySubtitleRotation();
     initCardSkinPicker();
