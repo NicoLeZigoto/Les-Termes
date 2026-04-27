@@ -547,7 +547,7 @@
       #right-pane {
           flex: 1; display: flex; justify-content: center; align-items: center;
           flex-direction: column; padding: 42px; min-width: 0; max-width: 50%;
-          height: 100%; overflow-y: auto; position: relative;
+          height: 100%; overflow: hidden; position: relative;
           border-left: 4px solid rgba(46,64,96,0.4);
       }
       
@@ -624,9 +624,22 @@
           color: #e8ddd0; padding: 30px; width: 100%; max-width: 400px;
           box-shadow: 6px 6px 0 #0a1018, 0 0 0 1px rgba(240,236,228,0.03);
           transform: rotate(1deg); text-align: center; border-radius: 12px;
+          display: flex; flex-direction: column;
+          max-height: 55vh;
+          overflow: hidden;
       }
-      .card-category { color: #d42b2b; font-weight: bold; margin: 0; font-size: 1.2rem; letter-spacing: 0.05em; }
-      .card-text { font-size: 2rem; margin: 20px 0; font-weight: bold; line-height: 1.2; color: #e8ddd0; }
+      .card-category { color: #d42b2b; font-weight: bold; margin: 0; font-size: 1.2rem; letter-spacing: 0.05em; flex-shrink: 0; }
+      .card-text {
+          font-size: 2rem; margin: 20px 0; font-weight: bold; line-height: 1.2; color: #e8ddd0;
+          overflow-y: auto;
+          overflow-wrap: break-word;
+          flex: 1;
+          scrollbar-width: thin;
+          scrollbar-color: #d42b2b #0f1a26;
+      }
+      .card-text::-webkit-scrollbar { width: 4px; }
+      .card-text::-webkit-scrollbar-track { background: #0f1a26; border-radius: 2px; }
+      .card-text::-webkit-scrollbar-thumb { background: #d42b2b; border-radius: 2px; }
       #timer-display { font-size: 6rem; color: #d42b2b; font-weight: bold; margin-top: 10px; line-height: 1; }
       .recap-text { font-size: 1.4rem; color: #e8ddd0; background: #0f1a26; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 5px solid #d42b2b; animation: popIn 0.5s ease-out forwards; line-height: 1.4; text-align: left; }
       
@@ -710,7 +723,7 @@
      .card-front { background: var(--card-back-image) center/cover no-repeat #1a2a3a; color: transparent; font-size: 0; }
       .card-back { background: #1a2a3a; color: #e8ddd0; flex-direction: column; padding: 20px; transform: rotateY(180deg); border-top: 3px solid #d42b2b; }
       .card-back .card-category { font-size: 1.1rem; }
-     .card-back .card-text { font-size: clamp(1.55rem, 3.5cqw, 1.6rem); color: #e8ddd0; overflow: hidden; display: -webkit-box; line-clamp: 8; -webkit-line-clamp: 8; -webkit-box-orient: vertical; }
+     .card-back .card-text { font-size: clamp(1.55rem, 3.5cqw, 1.6rem); color: #e8ddd0; max-height: 180px; overflow-y: auto; overflow-wrap: break-word; display: block; -webkit-line-clamp: unset; line-clamp: unset; }
       
       /* =========================================================
          CIMETIÈRE
