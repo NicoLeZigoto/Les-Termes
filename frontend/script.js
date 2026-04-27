@@ -258,13 +258,14 @@ socket.on('room_joined', (data) => {
     }
 });
 function toggleRole() {
-    audioManager.playSound('ui-click');
+    audioManager.playSound('plastic_snap', { volume: 0.8 });
     socket.emit('toggle_role', currentRoomCode);
 }
 
 socket.on('player_joined', (data) => {
     players = data.players;
     renderPlayers();
+    audioManager.playSound('bubble_pop', { volume: 0.7 });
     showNotification(`${data.newPlayer.avatar} ${data.newPlayer.name} a rejoint la partie ${data.newPlayer.isSpectator ? 'comme spectateur ! 👀' : '!'}`);
 });
 
@@ -342,6 +343,8 @@ socket.on('game_started', (data) => {
     const countdownOverlay = document.getElementById('game-countdown-overlay');
     if (countdownOverlay) countdownOverlay.classList.add('hidden');
     isCountingDown = false;
+
+    audioManager.stopSound('countdown_clock');
 
     gamePhase = 'drawing';
     currentCard = null;
@@ -643,13 +646,13 @@ function handleVoteClick(targetId) {
         }
     }
 
-    // Affichage local du pointeur
+    audioManager.playSound('select_beep', { volume: 0.5 });
+
     document.querySelectorAll('.avatar').forEach(el => el.classList.remove('selected-target'));
     document.getElementById(`avatar-${targetId}`)?.classList.add('selected-target');
     showPointerVisual(MY_ID, targetId);
     document.getElementById('btn-validate').classList.remove('hidden');
 
-    // On stocke temporairement la cible (pas encore validé)
     window._pendingVoteTarget = targetId;
     if (GAME_VOTE_MODE === 'transparent') {
         socket.emit('point_target', { roomCode: currentRoomCode, targetId: targetId });
@@ -679,11 +682,13 @@ socket.on('vote_registered', (data) => {
     // Déjà géré localement, rien de plus
 });
 
-// Le serveur prévient que quelqu'un a validé son vote (Cercle vert)
 socket.on('player_validated', (data) => {
     const avatarEl = document.getElementById(`avatar-${data.voterId}`);
     if (avatarEl) {
         avatarEl.classList.add('validated');
+        if (data.voterId !== MY_ID) {
+            audioManager.playSound('ui_confirm', { volume: 0.6 });
+        }
     }
 });
 
@@ -901,6 +906,7 @@ socket.on('player_disconnected', (data) => {
     enqueueAnimation(async () => {
         players = data.players;
         renderPlayers();
+        audioManager.playSound('whoosh_out', { volume: 0.6 });
         showNotification(`💔 ${data.playerName} a quitté la partie !`);
     });
 });
@@ -910,6 +916,9 @@ socket.on('reader_changed', (data) => {
         currentReaderId = data.newReaderId;
         renderPlayers();
         prepareNextTurn();
+        
+        audioManager.playSound('sparkle', { volume: 0.6 });
+        
         if (gamePhase !== 'lobby') {
             const newReader = players.find(p => p.id === data.newReaderId);
             if (newReader) showNotification(`${newReader.avatar} ${newReader.name} doit maintenant piocher.`);
@@ -1045,6 +1054,8 @@ socket.on('game_countdown', (data) => {
     document.getElementById('waiting-text').classList.add('hidden');
     isCountingDown = true;
     
+    audioManager.playSound('countdown_clock', { volume: 0.8 });
+    
     let count = data.seconds;
     val.innerText = count;
     
@@ -1053,10 +1064,9 @@ socket.on('game_countdown', (data) => {
         if (count <= 0) {
             clearInterval(interval);
             overlay.classList.add('hidden');
-            // Ne pas réafficher les contrôles lobby ici — attendre game_started
         } else {
             val.innerText = count;
-            audioManager.playSound('vote-tick');
+            audioManager.playSound('vote-tick', { volume: 0.3 });
         }
     }, 1000);
 });
@@ -1066,9 +1076,11 @@ socket.on('countdown_cancelled', (data) => {
     const overlay = document.getElementById('game-countdown-overlay');
     if (overlay) overlay.classList.add('hidden');
     
+    audioManager.stopSound('countdown_clock');
+    audioManager.playSound('ui_fail', { volume: 0.8 });
+    
     showNotification(`🚫 ${data.reason}`);
     
-    // On réaffiche les contrôles du lobby
     prepareNextTurn();
 });
 
@@ -1544,6 +1556,8 @@ async function triggerTieAnimation(tiedPlayerIds) {
         while (j === i) j = Math.floor(Math.random() * tiedPlayers.length);
         const a = tiedPlayers[i], b = tiedPlayers[j];
 
+        audioManager.playSound('short_spark', { volume: 0.4 });
+
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('lightning-svg');
         svg.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:50;';
@@ -1648,7 +1662,7 @@ function endGameBecauseDeckIsEmpty() {
     const bestScore = Math.max(...contenders.map(p => p.score));
     const winners = contenders.filter(p => p.score === bestScore);
 
-    audioManager.playSound('deck-empty');
+    audioManager.playSound('wind_howl', { volume: 0.25 });
 
     if (winners.length === 1) {
         showNotification("🃏 Plus de cartes disponibles : fin de partie !");
@@ -1952,6 +1966,7 @@ if (document.readyState === 'loading') {
 // =========================================================
 
 function showNotification(msg) {
+    audioManager.playSound('ui-pop', { volume: 0.35 });
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = 'toast';
@@ -2060,6 +2075,7 @@ function renderCemetery() {
 }
 
 function toggleCemetery() {
+    audioManager.playSound('crypt_door', { volume: 0.7 });
     document.getElementById('cemetery-overlay').classList.toggle('hidden');
 }
 
