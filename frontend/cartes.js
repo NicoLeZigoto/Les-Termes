@@ -15,6 +15,11 @@ const cartesJSON =[
     { category: "TRASH", text: "Qui ferait le pire président ?", comments:["Kim Jong-Un fait moins peur que $pseudo avec du pouvoir"] },
     { category: "TRASH", text: "Qui aurait grandement besoin d'une muselière au vu des atrocités qui sortent de sa bouche au quotidien ?", comments:["Un jour tes mots vont te rattraper $pseudo. Et on verra si tu cours vite..."] },
     { category: "TRASH", text: "Qui aurait collaboré avec la nazis ?", comments:["La loyauté de $pseudo a un prix, et il est étonnamment bas.", "Sérieusement, ne lui racontez JAMAIS de secrets."] },
+    { category: "TRASH", text: "Qui lâche les pires « takes » de l'Histoire, tellement controversées qu'on frôle la garde à vue à chaque fin de phrase ?", comments:["« Oh ça va, toute façon on peut plus rien dire... »"] },
+    { category: "TRASH", text: "Qui est en train de fusionner physiquement avec sa chaise gamer à force de ne jamais sortir de chez lui ?", comments:["Prendre une douche et aller toucher de l'herbe, c'est pas une quête secondaire $pseudo.", "L'odeur de $pseudo, c'est pour faire des dégâts de zone IRL ?"] },
+    { category: "TRASH", text: "Qui est resté mentalement bloqué dans les années 50 vu sa misogynie totalement décomplexée ?", comments:["Pour la millième fois $pseudo, oui les 'bonnes femmes' ont le droit de voter, et non, leur place n'est pas qu'à la cuisine."] },
+    { category: "TRASH", text: "Qui est le plus homophobe ?", comments:["La science l'a prouvé : les plus gros homophobes sont juste dans le déni. Assume $pseudo, on t'aimera quand même !", "Ça va finir par pop sur Grindr tout ça..."] },
+    { category: "TRASH", text: "Qui est le plus raciste ?", comments:["Le seul 'ami noir' de $pseudo c'est son livreur uber-eat"] },
 
 
     // ==========================================
@@ -88,7 +93,8 @@ const cartesJSON =[
     { category: "WTF", text: "Qui pourrait manger de la pâtée pour chat par erreur et trouver ça bon ?", comments: ["'En vrai c'est pas si terrible avec un peu de Ketchup !'"] },
     { category: "WTF", text: "Qui a le plus gros dossier photo compromettant dans les téléphones des autres ?", comments:["Le jour où on te fait chanter, t'es ruiné $pseudo."] },
     { category: "WTF", text: "Qui pourrait rejoindre une secte sans s'en rendre compte ?", comments:["Je vous assure que c'est pour les Resto du Cœur que $pseudo sacrifie des chèvres !"] },
-
+    { category: "WTF", text: "Qui ramène systématiquement la faute sur « les banques », « les médias » ou carrément une communauté précise au 'nez crochu' dès qu'il a un problème dans sa vie ?", comments:["Tu comptes acheter le paradis avec tes banques ?"] },
+    { category: "WTF", text: "Qui est de base parti faire ses courses vers 18h un mardi parce qu'il n'avait plus rien dans son frigo à part un demi-citron et un fond de beurre doux, et qu'il voulait absolument acheter des pâtes, genre des tagliatelles ou des linguine vu que les coquillettes ça le fait moins, parce qu'en fait à l'origine il voulait vraiment se faire un gros kiff avec des pâtes au saumon, plutôt du saumon frais d'ailleurs, puisque c'est un plat réconfortant qui lui rappelle grave son enfance, donc par pure nostalgie il voulait se cuisiner ça, puis en fait en marchant jusqu'au Franprix du quartier il n'a pas regardé le sol, il a glissé bêtement sur une plaque d'égout un peu humide à cause de la pluie, il est tombé de tout son long en se cognant méchamment le bras gauche et du coup bah, un attroupement de passants s'est formé pour appeler les secours qui l'ont finalement pris en charge assez rapidement parce que bon, en arrivant aux urgences avec les pompiers le médecin a regardé la radio et a conclu qu'il avait quand même l'épaule complètement déboîtée donc c'est quand même super chaud... mais bon, tout ça pour dire, on s'égare de fou : au final c'est qui ici qui aime les pâtes au saumon ?", comments:["Nan mais là c'est trop trop long...", "STFU!", "Qui a eu l'idée de cette carte de merde sérieux ?" ]},
     // ==========================================
     // QUOTIDIEN
     // ==========================================
@@ -107,6 +113,7 @@ const cartesJSON =[
     { category: "QUOTIDIEN", text: "Qui mérite la palme d'or de la pire fausse excuse éclatée pour ne jamais venir à une de nos soirées ?", comments:["« Désolé j'ai aquaponey », vraiment ? La prochaine fois $pseudo assume juste que tu préfères ta console à notre amitié."] },
     { category: "QUOTIDIEN", text: "Qui ne va JAMAIS se remettre en question même s'il accumule 500 cartes à ce jeu ?", comments:["Regarde-toi un jour dans le miroir $pseudo. Et va lire Toltèque aussi."] },
     { category: "QUOTIDIEN", text: "Qui prend absolument TOUT au premier degré ?", comments:["Il l'a."] },
+    { category: "QUOTIDIEN", text: "Qui ne sait jamais s'arrêter et fait systématiquement la vanne de trop qui rend la situation hyper cringe ?", comments:["Essaye de lire l'intéligence emotionelle ", "On riait AVEC toi à la base. Là on a juste honte POUR toi."] },
 
     // ==========================================
     // EGO
@@ -126,6 +133,7 @@ const cartesJSON =[
     { category: "EGO", text: "Qui corrige toujours ton français comme s'il était prof ?", comments:["On ne dit pas 'fils A pute', bon bah voilà c'est pareil !"] },
     { category: "EGO", text: "Qui est la plus grosse victime ?", comments:["Une fois j'ai vu $pseudo s'excuser auprès du trottoir."] },
     { category: "EGO", text: "Si on lui donnait les pleins pouvoirs mondiaux, qui deviendrait un véritable tyran au bout de deux heures seulement ?", comments:["Donnez du pouvoir à un homme, et vous verrez sa vraie nature se révéler" ] },
+    { category: "EGO", text: "Qui se vexe pour tout, extrapole chaque situation, et s'invente des guerres avec des gens qui ne s'intéressent même pas à lui ?", comments:["Tu connais les « 4 Accords Toltèques » $pseudo ?"] },
 
     // ==========================================
     // STYLE
