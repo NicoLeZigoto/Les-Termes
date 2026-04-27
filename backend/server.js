@@ -50,11 +50,55 @@ function handlePlayerDeparture(socket, roomCode) {
     if (!room) return;
 
     const playerIndex = room.players.findIndex(p => p.id === socket.id);
-    if (playerIndex !== -1) {
-        room.players.splice(playerIndex, 1);
+    if (playerIndex === -1) return;
+
+    const player = room.players[playerIndex];
+
+    // En cours de partie : on marque le joueur mort/déconnecté au lieu de le supprimer,
+    // pour qu'il apparaisse dans le résumé final et que les scores soient préservés.
+    if (room.phase !== 'lobby') {
+        player.isDead = true;
+        player.disconnected = true;
+
+        io.to(roomCode).emit('player_disconnected', {
+            playerId: socket.id,
+            playerName: player.name,
+            players: room.players
+        });
+
+        // Passage de flambeau si c'était le lecteur
+        if (room.currentReaderId === socket.id) {
+            const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
+            if (nextReader) {
+                room.currentReaderId = nextReader.id;
+                if (room.phase === 'reading' || room.phase === 'drawing') {
+                    room.phase = 'drawing';
+                    if (room.pendingCards) {
+                        room.deck.push(...room.pendingCards);
+                        room.pendingCards = null;
+                    }
+                }
+                io.to(roomCode).emit('reader_changed', { newReaderId: nextReader.id });
+            } else {
+                room.currentReaderId = null;
+            }
+        }
+
+        // Vérifier si la partie doit se terminer
+        const alive = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
+        if (alive.length <= 2) {
+            clearTimer(room);
+            if (alive.length > 0) {
+                emitGameOver(roomCode, alive);
+            }
+        }
+        return;
     }
 
-    // 1. [NOUVEAU] Sécurité Countdown : Si un mec quitte et qu'on est en train de lancer
+    // En lobby : suppression propre du joueur
+    room.players.splice(playerIndex, 1);
+
+    // Sécurité Countdown
     const activePlayers = room.players.filter(p => !p.isSpectator);
     if (room.countdownTimer && activePlayers.length < 3) {
         clearTimeout(room.countdownTimer);
@@ -64,7 +108,7 @@ function handlePlayerDeparture(socket, roomCode) {
         });
     }
 
-    // 2. [ORIGINAL] Room vide
+    // Room vide
     if (room.players.length === 0) {
         room._emptyTimer = setTimeout(() => {
             if (rooms[roomCode] && rooms[roomCode].players.length === 0) {
@@ -74,7 +118,7 @@ function handlePlayerDeparture(socket, roomCode) {
         return;
     }
 
-    // 3. [ORIGINAL] Passage de flambeau si le chef est parti
+    // Passage de flambeau (chef de lobby)
     if (room.currentReaderId === socket.id) {
         const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
         if (nextReader) {
