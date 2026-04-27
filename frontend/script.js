@@ -492,7 +492,10 @@ function proceedWithChosenCard() {
         document.getElementById('btn-validate').classList.add('hidden');
     } else {
         document.getElementById('btn-start-vote').classList.add('hidden');
-        document.getElementById('not-reader-text').classList.remove('hidden');
+        const notReaderText = document.getElementById('not-reader-text');
+        notReaderText.innerText = "Le lecteur lit la carte et va lancer le vote...";
+        notReaderText.classList.remove('hidden');
+        
         document.getElementById('btn-validate').classList.add('hidden');
     }
 }
@@ -965,7 +968,14 @@ function prepareNextTurn() {
         safeToggle('start-controls', false);
         const wt = safeToggle('waiting-text', true);
         if (wt) {
-            wt.innerHTML = `C'est à <strong>${readerName}</strong> de piocher !`;
+            // NOUVEAU : Adaptation du texte selon l'état du joueur
+            if (myPlayer && myPlayer.isSpectator) {
+                wt.innerHTML = `👀 Tu observes. C'est à <strong>${readerName}</strong> de piocher !`;
+            } else if (myPlayer && myPlayer.isDead) {
+                wt.innerHTML = `👻 Tu es mort. C'est à <strong>${readerName}</strong> de piocher !`;
+            } else {
+                wt.innerHTML = `C'est à <strong>${readerName}</strong> de piocher !`;
+            }
         }
     }
 
@@ -976,7 +986,11 @@ function prepareNextTurn() {
     ];
     elementsToHide.forEach(id => safeToggle(id, false));
 
-    // NOUVEAU : On cache tous les boutons Poke actifs
+    // NOUVEAU : Purge du texte du tie-break (ou ancien vote) pour éviter le flash
+    const notReaderTextEl = document.getElementById('not-reader-text');
+    if (notReaderTextEl) notReaderTextEl.innerText = "";
+
+    // On cache tous les boutons Poke actifs
     document.querySelectorAll('.btn-poke').forEach(btn => btn.classList.add('hidden'));
 
     // Réinitialisation des états logiques de vote
