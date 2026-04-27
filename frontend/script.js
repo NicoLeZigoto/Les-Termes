@@ -1500,19 +1500,17 @@ function endGameBecauseDeckIsEmpty() {
     const bestScore = Math.max(...contenders.map(p => p.score));
     const winners = contenders.filter(p => p.score === bestScore);
 
+    showNotification("🃏 Plus de cartes disponibles : fin de partie !");
+
     if (winners.length === 1) {
-        showNotification("🃏 Plus de cartes disponibles : fin de partie !");
         showVictory(winners[0]);
         const msg = document.getElementById('victory-message');
         if (msg) msg.innerHTML = `${winners[0].avatar} <strong>${winners[0].name}</strong> remporte la partie : le deck est vide.`;
-        return;
+    } else {
+        showTie(winners);
+        const msg = document.getElementById('victory-message');
+        if (msg) msg.innerHTML = `Égalité (deck vide) entre ${winners.map(p => `${p.avatar} <strong>${p.name}</strong>`).join(', ')} avec ${bestScore} point${bestScore > 1 ? 's' : ''}.`;
     }
-    const overlay = document.getElementById('victory-overlay');
-    document.getElementById('victory-title').innerHTML = "🃏 DECK VIDE 🃏";
-    document.getElementById('victory-message').innerHTML = `Égalité entre ${winners.map(p => `${p.avatar} <strong>${p.name}</strong>`).join(', ')} avec ${bestScore} point${bestScore > 1 ? 's' : ''}.`;
-    renderRivalrySummary();
-    renderEndgameCardsSummary(winners);
-    overlay.classList.remove('hidden');
 }
 
 function showVictory(winner) {

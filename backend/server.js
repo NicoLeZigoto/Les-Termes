@@ -89,7 +89,10 @@ function handlePlayerDeparture(socket, roomCode) {
         if (alive.length <= 2) {
             clearTimer(room);
             if (alive.length > 0) {
-                emitGameOver(roomCode, alive);
+                // On passe TOUS les joueurs actifs (même morts) pour que emitGameOver
+                // calcule le vrai gagnant/égalité sur la totalité des scores
+                const allActive = room.players.filter(p => !p.isSpectator);
+                emitGameOver(roomCode, allActive);
             }
         }
         return;
@@ -294,7 +297,8 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
 
             if (loser.score >= room.scoreToWin) {
                 return setTimeout(() => {
-                    io.to(roomCode).emit('game_over', { winnerId: loserId, players: room.players });
+                    const allActive = room.players.filter(p => !p.isSpectator);
+                    emitGameOver(roomCode, allActive);
                 }, 7000); 
             }
             scheduleNextRound(roomCode, 8000); 
@@ -821,7 +825,8 @@ socket.on('cast_vote', (data) => {
             if (alive.length <= 2 && room.phase !== 'lobby') {
                 clearTimer(room);
                 if (alive.length > 0) {
-                    emitGameOver(roomCode, alive);
+                    const allActive = room.players.filter(p => !p.isSpectator);
+                    emitGameOver(roomCode, allActive);
                 }
             }
             break;
