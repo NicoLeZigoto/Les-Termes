@@ -70,10 +70,9 @@ function handlePlayerDeparture(socket, roomCode) {
             if (nextReader) {
                 room.currentReaderId = nextReader.id;
                 
-                // CORRECTION BUG 5 : Réinitialisation si la phase est reading ou drawing
                 if (room.phase === 'reading' || room.phase === 'drawing') {
                     room.phase = 'drawing';
-                    room.currentCard = null; // On annule la carte en cours pour le nouveau lecteur
+                    room.currentCard = null; 
                     
                     if (room.pendingCards) {
                         room.deck.push(...room.pendingCards);
@@ -86,22 +85,29 @@ function handlePlayerDeparture(socket, roomCode) {
             }
         }
 
-        // Vérifier si la partie doit se terminer
-        const alive = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
-        if (alive.length <= 2) {
-            clearTimer(room);
-            if (alive.length > 0) {
-                const allActive = room.players.filter(p => !p.isSpectator);
-                emitGameOver(roomCode, allActive);
+        // CORRECTION : Délai de grâce de 10s avant de fermer la partie
+        setTimeout(() => {
+            if (!rooms[roomCode]) return;
+            
+            const alive = rooms[roomCode].players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
+            
+            // On ne déclenche le Game Over que si on est toujours < 3 après 10 secondes
+            if (alive.length <= 2 && rooms[roomCode].phase !== 'lobby' && rooms[roomCode].phase !== 'game_over') {
+                clearTimer(rooms[roomCode]);
+                if (alive.length > 0) {
+                    const allActive = rooms[roomCode].players.filter(p => !p.isSpectator);
+                    rooms[roomCode].phase = 'game_over'; // On verrouille l'état
+                    emitGameOver(roomCode, allActive);
+                }
             }
-        }
+        }, 10000); 
+
         return;
     }
 
-    // En lobby : suppression propre du joueur
+    // --- LOGIQUE LOBBY ---
     room.players.splice(playerIndex, 1);
 
-    // Sécurité Countdown
     const activePlayers = room.players.filter(p => !p.isSpectator);
     if (room.countdownTimer && activePlayers.length < 3) {
         clearTimeout(room.countdownTimer);
@@ -111,7 +117,6 @@ function handlePlayerDeparture(socket, roomCode) {
         });
     }
 
-    // Room vide
     if (room.players.length === 0) {
         room._emptyTimer = setTimeout(() => {
             if (rooms[roomCode] && rooms[roomCode].players.length === 0) {
@@ -121,7 +126,6 @@ function handlePlayerDeparture(socket, roomCode) {
         return;
     }
 
-    // Passage de flambeau (chef de lobby)
     if (room.currentReaderId === socket.id) {
         const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
         if (nextReader) {
@@ -399,6 +403,7 @@ function startVotePhase(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     // Tick toutes les secondes pour synchronisation
     room.tickRef = setInterval(() => {
         remaining--;
+        room.currentTimerValue = remaining; 
         io.to(roomCode).emit('timer_tick', { remaining });
 
         // Fast-forward : si tout le monde a voté
@@ -478,17 +483,27 @@ socket.on('join_room', (data) => {
     const room = rooms[roomCode];
     if (!room) return socket.emit('error_msg', "Room introuvable !");
 
-    // Annuler le timer de destruction si quelqu'un rejoint une room vide
     if (room._emptyTimer) {
         clearTimeout(room._emptyTimer);
         room._emptyTimer = null;
         console.log(`✅ Timer de destruction annulé pour room ${roomCode} — nouveau joueur`);
     }
 
-    // CORRECTION BUG 2 : On récupère la liste des joueurs ayant déjà validé leur vote
+    // Gestion de la reconnexion après un Game Over
+    if (room.phase === 'game_over') {
+        const allActive = room.players.filter(p => !p.isSpectator);
+        const maxScore = Math.max(...allActive.map(p => p.score));
+        const winners = allActive.filter(p => p.score === maxScore);
+
+        return socket.emit('game_over', {
+            winnerId: winners.length === 1 ? winners[0].id : null,
+            winnerIds: winners.map(w => w.id),
+            players: room.players
+        });
+    }
+
     const votedPlayers = Object.keys(room.votes || {});
 
-    // Éviter les doublons (reconnexion rapide)
     const existing = room.players.find(p => p.id === socket.id);
     if (existing) {
         return socket.emit('room_joined', {
@@ -501,21 +516,21 @@ socket.on('join_room', (data) => {
             phase: room.phase,
             currentCard: room.currentCard,
             isVoting: room.isVoting,
-            votedPlayers // Injecté ici
+            votedPlayers 
         });
     }
+
     const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
     room.players.push(newPlayer);
     socket.join(roomCode);
 
-    // Si la room n'a plus de chef valide (ex: tous passés spectateurs), le nouveau joueur devient chef
     const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
     if (!currentReaderValid && room.phase === 'lobby') {
         room.currentReaderId = socket.id;
-        newPlayer.isSpectator = false; // Le nouveau chef est automatiquement joueur
+        newPlayer.isSpectator = false; 
         console.log(`👑 ${newPlayer.name} devient automatiquement chef de la room ${roomCode}`);
     }
-    // Sécurité : Si c'est le premier à rejoindre ou s'il n'y a que des spectateurs
+
     const activePlayers = room.players.filter(p => !p.isSpectator);
     if (activePlayers.length === 0) {
         room.phase = 'lobby';
@@ -530,14 +545,12 @@ socket.on('join_room', (data) => {
         voteMode: room.voteMode,
         scoreToWin: room.scoreToWin,
         phase: room.phase,
-        // On s'assure d'envoyer null si on est en lobby
         currentCard: room.phase === 'lobby' ? null : room.currentCard,
         isVoting: room.phase === 'lobby' ? false : room.isVoting,
-        votedPlayers // Injecté ici
+        votedPlayers 
     });
 
     socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
-    // Notifier la room du nouveau currentReaderId si changement
     socket.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
     console.log(`${newPlayer.name} (${socket.id}) a rejoint la room ${roomCode} en tant que spectateur. Total joueurs: ${room.players.length}`);
 });
