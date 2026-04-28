@@ -108,7 +108,7 @@ const IDENTITY_SUBTITLES = [
     "Balance ton blaze (et ton 06 si tu veux).", "PTDR T KI ?"
 ];
 
-const AVATAR_PAGE_SIZE = 10;
+let AVATAR_PAGE_SIZE = 10;
 const AVATAR_CHOICES = [
     // Visages et Attitudes
     "😂", "😃", "😅", "😉", "😋", "😎", "😍", "😘", "🙂", "🤔", "😐", "😶", "🙄", "😏", "😣", "😥", "😮", "🤐", "🤤", "😒", "😓", "😔", "😕", "🙃", "🙁", "😞", "😤", "😩", "😬", "😱", "😳", "😵", "😠", "🤬", "😇", "🤠", "🤡", "🤫", "🤓", "😈", "💀", "👻", "👽", "🤖", "💩",
@@ -1129,16 +1129,13 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
     const h = table.clientHeight || w;
     const centerX = w / 2;
     const centerY = h / 2;
-    
-    // --- MODIFICATIONS RESPONSIVE ---
-    // 1. On prend la plus petite dimension entre largeur et hauteur pour ne pas déborder
+
+    // Calcul dynamique pour le responsive
     const minDimension = Math.min(w, h);
-    // 2. Sur mobile (largeur < 900px), on réduit un peu plus le rayon pour laisser de la place aux pseudos
-    const radiusDivisor = window.innerWidth < 900 ? 2.8 : 2.5; 
+    const isMobile = window.innerWidth <= 900;
+    const radiusDivisor = isMobile ? 2.8 : 2.5; 
     const radius = (minDimension / radiusDivisor) * radiusScale;
-    
-    // 3. Offset adaptatif : les avatars font 90px de large sur PC (offset 45), mais 70px sur mobile (offset 35)
-    const offset = window.innerWidth < 900 ? 35 : 45;
+    const offset = isMobile ? 35 : 45; // Taille de l'avatar réduite sur mobile
 
     // 1. On sépare les joueurs actifs et les spectateurs
     const activePlayers = players.filter(p => !p.isSpectator);
@@ -1147,7 +1144,6 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
     // 2. Rendu des joueurs actifs autour de la table
     activePlayers.forEach((p, index) => {
         const angle = (index / activePlayers.length) * Math.PI * 2;
-        
         let x = centerX + radius * Math.cos(angle) - offset;
         let y = centerY + radius * Math.sin(angle) - offset;
 
@@ -1827,7 +1823,6 @@ function closeVolumeMenu() {
 
 function initLobbyUI() {
     initVolume(); 
-    // CORRECTION BUG 1 : Suppression de audioManager.playMusic('lobby') ici pour éviter le blocage Autoplay
     startIdentitySubtitleRotation();
     initCardSkinPicker();
 
@@ -1871,6 +1866,9 @@ function initLobbyUI() {
 
     const renderAvatarPage = () => {
         if (!avatarPicker) return;
+        // Ajustement dynamique pour le mobile
+        AVATAR_PAGE_SIZE = window.innerWidth <= 900 ? 8 : 10;
+        
         const start = avatarPageIndex * AVATAR_PAGE_SIZE;
         avatarPicker.innerHTML = AVATAR_CHOICES.slice(start, start + AVATAR_PAGE_SIZE).map(a =>
             `<div class="avatar-option${a === selectedAvatar ? ' selected' : ''}" data-value="${a}">${a}</div>`
@@ -1879,6 +1877,7 @@ function initLobbyUI() {
 
     if (avatarPicker) {
         renderAvatarPage();
+        window.addEventListener('resize', renderAvatarPage); // Met à jour si on tourne l'écran
         avatarPicker.addEventListener('click', e => {
             if (e.target.classList.contains('avatar-option')) {
                 selectedAvatar = e.target.dataset.value;

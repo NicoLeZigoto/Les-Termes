@@ -1196,3 +1196,123 @@ input[type=range]::-moz-range-track {
         font-size: 1.3rem;
     }
 }
+
+/* =========================================================
+   RESPONSIVE DESIGN (MOBILES & TABLETTES)
+   ========================================================= */
+
+   @media (max-width: 900px), (max-height: 760px) {
+    /* 1. Layout Global (Passage en colonne) */
+    #game-layout {
+        flex-direction: column;
+        padding: 60px 10px 10px 10px; /* Laisse la place pour les boutons en haut */
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    #left-pane {
+        flex: 0 0 45%;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #right-pane {
+        flex: 1;
+        max-width: 100%;
+        width: 100%;
+        border-left: none;
+        border-top: 4px solid rgba(46,64,96,0.4);
+        padding: 15px 10px;
+    }
+
+    /* 2. Adaptation des Joueurs et de la Table */
+    #table {
+        width: 100%;
+        max-width: 45vh;
+    }
+
+    .player { width: 70px; }
+    
+    .avatar { 
+        width: 60px; 
+        height: 60px; 
+        font-size: 2.2rem; 
+        padding-top: 6px; 
+    }
+    
+    .player-name { 
+        font-size: 0.95rem; 
+        padding: 2px 8px; 
+        margin-top: 2px; 
+    }
+
+    /* 3. Réorganisation de l'UI (Barre de status en haut) */
+    #btn-back-menu, #btn-volume-toggle, #cemetery-btn {
+        position: fixed;
+        top: 15px;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        z-index: 1000;
+    }
+
+    #btn-back-menu { left: 10px; }
+    #btn-volume-toggle { right: auto; left: 130px; } /* Placé à côté du bouton menu */
+    #cemetery-btn { right: 10px; left: auto; top: 15px; }
+
+    #room-badge {
+        bottom: 15px;
+        left: 10px;
+        font-size: 0.9rem;
+        padding: 4px 12px;
+    }
+
+    /* 4. Spectateurs à l'horizontale */
+    #spectators-container {
+        top: 60px; /* En dessous des boutons */
+        left: 10px;
+        right: 10px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        pointer-events: none; /* Empêche de bloquer les clics sur la table */
+    }
+
+    /* 5. Optimisation de l'Avatar Picker */
+    .avatar-picker-shell {
+        flex-direction: column;
+    }
+    
+    .avatar-picker {
+        grid-template-columns: repeat(4, 50px);
+        grid-template-rows: repeat(2, 50px);
+        gap: 8px;
+    }
+
+    .avatar-option {
+        width: 50px;
+        height: 50px;
+        font-size: 1.8rem;
+        padding-top: 4px;
+    }
+    
+    .avatar-nav-btn {
+        width: 100%;
+        height: 45px;
+        border-radius: 8px;
+        font-size: 1.4rem;
+        margin-top: 5px;
+    }
+
+    /* 6. Optimisation des Textes */
+    .room-neon-title { font-size: 2rem; margin-bottom: 10px; }
+    .card { padding: 20px; }
+    .card-text { font-size: 1.4rem; margin: 15px 0; }
+    #timer-display { font-size: 4rem; }
+    .hero-title { font-size: 3rem; }
+    .lobby-card h1 { font-size: 2.5rem; }
+
+    /* 7. Amélioration Tactile Globale */
+    .player, button, .avatar-option, #deck, .selectable-card, input[type=range] {
+        touch-action: manipulation;
+    }
+}
