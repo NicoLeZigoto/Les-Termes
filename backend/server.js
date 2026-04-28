@@ -288,12 +288,19 @@ function resolveVotes(roomCode, isTieBreak = false, tieBreakCandidates = []) {
             loser.wonCards.push(room.currentCard);
             room.currentReaderId = loserId;
 
+            // BUG 1 FIX : Le serveur choisit le commentaire pour garantir la synchronisation
+            const comments = room.currentCard.comments;
+            const chosenComment = (comments && comments.length > 0)
+                ? comments[Math.floor(Math.random() * comments.length)]
+                : "";
+
             io.to(roomCode).emit('round_result', {
                 type: 'loser',
                 loserId,
                 votes: votesByTarget,
                 newReaderId: loserId,
-                players: room.players
+                players: room.players,
+                chosenComment
             });
 
             if (loser.score >= room.scoreToWin) {
@@ -619,7 +626,7 @@ socket.on('toggle_role', (roomCode) => {
     });
 
     socket.on('replay_game', (data) => {
-        const { roomCode, deck } = data;
+        const { roomCode } = data; // BUG 3 FIX : On n'accepte plus le deck venant du client
         const room = rooms[roomCode];
         if (!room) return;
         
@@ -629,7 +636,23 @@ socket.on('toggle_role', (roomCode) => {
         // Si la room n'a pas encore été réinitialisée, on le fait et on met tout le monde spectateur
         if (room.phase !== 'lobby') {
             room.phase = 'lobby';
-            room.deck = deck ? [...deck] : [];
+
+            // BUG 3 FIX : On conserve le deck existant côté serveur (ne jamais le remplacer par le client)
+            // On construit la liste des cartes à exclure : cimetière + cartes gagnées par les joueurs
+            const excludedTexts = new Set([
+                ...room.cemetery.map(c => c.text),
+                ...room.players.flatMap(p => (p.wonCards || []).map(c => c.text))
+            ]);
+
+            // On filtre le deck courant pour ne garder que les cartes non brûlées / non gagnées
+            room.deck = room.deck.filter(c => !excludedTexts.has(c.text));
+
+            // BUG 3 FIX : Vérification sécurité — si le deck est trop petit, on l'alerte
+            if (room.deck.length < room.scoreToWin) {
+                socket.emit('error_msg', `⚠️ Plus assez de cartes (${room.deck.length} restantes) pour finir une partie. Veuillez relancer avec un nouveau paquet.`);
+                // On continue quand même pour permettre une courte partie
+            }
+
             room.cemetery = [];
             room.currentCard = null;
             room.votes = {};

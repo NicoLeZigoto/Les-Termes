@@ -122,11 +122,13 @@ const CARD_SKINS = [
     { id: 'skin-kh', name: 'Royaume Coeur', image: 'cartes/dos-carte-kh.png' },
     { id: 'skin-zelda', name: 'Force Trois', image: 'cartes/dos-carte-zelda.png' },
     { id: 'skin-blanc', name: 'Pure', image: 'cartes/dos-carte-blanche.png' },
-    { id: 'skin-vert', name: 'Nature', image: 'cartes/dos-carte-verte.png' },
-    { id: 'skin-solaire', name: 'Solaire', image: 'cartes/dos-carte-jaune.png' },
+    //{ id: 'skin-vert', name: 'Nature', image: 'cartes/dos-carte-verte.png' },
+    //{ id: 'skin-solaire', name: 'Solaire', image: 'cartes/dos-carte-jaune.png' },
     { id: 'skin-smash', name: 'Smash', image: 'cartes/dos-carte-smash.png' },
     { id: 'skin-lk', name: 'Roi-Liche', image: 'cartes/dos-carte-lk.png' },
     { id: 'skin-celeste', name: 'Celeste', image: 'cartes/dos-carte-celeste.png' },
+    { id: 'skin-cult', name: 'Cultiste', image: 'cartes/dos-carte-cult.png' },
+
 ];
 
 // ─── État local (lecture seule, tout vient du serveur) ───
@@ -357,13 +359,8 @@ socket.on('game_started', (data) => {
 
 function replayGame() {
     audioManager.playSound('ui-click');
-    const deck = typeof cartesJSON !== 'undefined' ? [...cartesJSON] :[];
-    // On mélange le deck de façon propre pour la nouvelle manche
-    for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-    socket.emit('replay_game', { roomCode: currentRoomCode, deck });
+    // BUG 3 FIX : Le serveur est le seul maître du paquet — on ne renvoie plus le deck
+    socket.emit('replay_game', { roomCode: currentRoomCode });
     
     // On cache l'écran de victoire uniquement pour le joueur qui a cliqué sur "Rejouer"
     document.getElementById('victory-overlay').classList.add('hidden');
@@ -381,13 +378,33 @@ socket.on('game_reset_state', (data) => {
     isVoting = false;
     window._myVoteValidated = false;
     window._pendingVoteTarget = null;
+    window._tieBreakCandidates = null;
+    window._tieBreakExcluded = [];
 
     document.getElementById('cemetery-overlay').classList.add('hidden');
     document.getElementById('player-cards-overlay').classList.add('hidden');
     document.getElementById('card-selection-overlay').classList.add('hidden');
 
+    // BUG 2 FIX : Arrêt explicite des sons de boucle pouvant rester actifs
     audioManager.stopSound('heartbeat', { volume: 0.2 });
+    audioManager.stopSound('vote-tick');
+    audioManager.stopSound('countdown_clock');
+
+    // BUG 2 FIX : Nettoyage des classes d'état sur le body et les avatars
     document.body.classList.remove('urgent-flash');
+    document.querySelectorAll('.avatar').forEach(el => {
+        el.classList.remove('tie-candidate', 'selected-target', 'validated');
+    });
+
+    // BUG 2 FIX : Remise à zéro des pointeurs (opacité + transform) et de currentRotation
+    players.forEach(p => {
+        p.currentRotation = 0;
+        const ptr = document.getElementById(`pointer-${p.id}`);
+        if (ptr) {
+            ptr.style.opacity = '0';
+            ptr.style.transform = 'rotate(0deg)';
+        }
+    });
 
     const cardCategory = document.getElementById('card-category');
     const cardText = document.getElementById('card-text');
@@ -754,9 +771,8 @@ socket.on('round_result', (data) => {
             const isUnanimous = voterIds.length === survivors.length - 1 && survivors.length > 2;
 
             let recapMessage = "";
-            const randomComment = currentCard.comments
-                ? currentCard.comments[Math.floor(Math.random() * currentCard.comments.length)]
-                : "";
+            // BUG 1 FIX : On utilise le commentaire choisi par le serveur (synchronisé pour tous)
+            const randomComment = data.chosenComment || "";
             const punchline = randomComment?.replace(/\$pseudo/g, `<strong style="color:#e74c3c;">${loser?.name}</strong>`);
 
             if (GAME_VOTE_MODE === 'anonyme') {
