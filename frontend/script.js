@@ -92,7 +92,8 @@ const PSEUDO_PLACEHOLDERS = [
     "Ex: Guendoul", "Ex: Ricky La Pénave", "Ex: Jonny L'horloger",
     "Ex: Tromax", "Ex: Ératosthène", "Ex: Marluxia", "Ex: DROP TABLE users; --force",
     "Ex: PILOTE", "Ex: Alphonse D'audrey de la cour des Fleurs", "Hey",
-    "Croquette", "Chouquette", "Monsieur Poitoux", "Bétadine"
+    "Croquette", "Chouquette", "Monsieur Poitoux", "Bétadine",
+    "Roseau", "Boca", "Chausette"
 ];
 
 const ROOM_NAME_PLACEHOLDERS = [
@@ -128,6 +129,8 @@ const CARD_SKINS = [
     { id: 'skin-lk', name: 'Roi-Liche', image: 'cartes/dos-carte-lk.png' },
     { id: 'skin-celeste', name: 'Celeste', image: 'cartes/dos-carte-celeste.png' },
     { id: 'skin-cult', name: 'Cultiste', image: 'cartes/dos-carte-cult.png' },
+    { id: 'skin-roseau', name: 'Roseau', image: 'cartes/dos-carte-roseau.png' },
+    { id: 'skin-mario', name: 'Mario 2 le 2', image: 'cartes/dos-carte-mario.png' },
 
 ];
 
