@@ -1129,7 +1129,16 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
     const h = table.clientHeight || w;
     const centerX = w / 2;
     const centerY = h / 2;
-    const radius = (w / 2.5) * radiusScale;
+    
+    // --- MODIFICATIONS RESPONSIVE ---
+    // 1. On prend la plus petite dimension entre largeur et hauteur pour ne pas déborder
+    const minDimension = Math.min(w, h);
+    // 2. Sur mobile (largeur < 900px), on réduit un peu plus le rayon pour laisser de la place aux pseudos
+    const radiusDivisor = window.innerWidth < 900 ? 2.8 : 2.5; 
+    const radius = (minDimension / radiusDivisor) * radiusScale;
+    
+    // 3. Offset adaptatif : les avatars font 90px de large sur PC (offset 45), mais 70px sur mobile (offset 35)
+    const offset = window.innerWidth < 900 ? 35 : 45;
 
     // 1. On sépare les joueurs actifs et les spectateurs
     const activePlayers = players.filter(p => !p.isSpectator);
@@ -1138,148 +1147,17 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
     // 2. Rendu des joueurs actifs autour de la table
     activePlayers.forEach((p, index) => {
         const angle = (index / activePlayers.length) * Math.PI * 2;
-        let x = centerX + radius * Math.cos(angle) - 45;
-        let y = centerY + radius * Math.sin(angle) - 45;
+        
+        let x = centerX + radius * Math.cos(angle) - offset;
+        let y = centerY + radius * Math.sin(angle) - offset;
 
         if (centerTargetId === p.id) {
-            x = centerX - 45;
-            y = centerY - 45;
+            x = centerX - offset;
+            y = centerY - offset;
         }
 
-        p.centerX = x + 45;
-        p.centerY = y + 45;
-
-        let playerDiv = document.getElementById(`player-${p.id}`);
-        if (!playerDiv) {
-            playerDiv = document.createElement('div');
-            playerDiv.className = 'player';
-            playerDiv.id = `player-${p.id}`;
-            playerDiv.onclick = () => handleVoteClick(p.id);
-            // NOUVEAU : Ajout du bouton Poke dans le template HTML
-            playerDiv.innerHTML = `
-                <div class="pointer" id="pointer-${p.id}"></div>
-                <div class="avatar" id="avatar-${p.id}">${p.avatar}</div>
-                <button class="btn-poke hidden" id="poke-btn-${p.id}" onclick="event.stopPropagation(); sendPoke()">👉 Poke</button>
-                <div class="player-name">${p.name}</div>
-                <div class="player-stack" id="stack-${p.id}" onclick="event.stopPropagation(); showPlayerCards('${p.id}')"></div>
-            `;
-            table.appendChild(playerDiv);
-        }
-
-        // Mise à jour position
-        playerDiv.style.left = `${x}px`;
-        playerDiv.style.top = `${y}px`;
-
-        // Mise à jour avatar
-        const avatarEl = document.getElementById(`avatar-${p.id}`);
-        if (avatarEl) {
-            avatarEl.innerText = p.avatar;
-            if (window._tieBreakCandidates && window._tieBreakCandidates.includes(p.id)) {
-                avatarEl.classList.add('tie-candidate');
-            }
-        }
-
-        // Icône lecteur
-        let iconEl = playerDiv.querySelector('.reader-icon');
-        if (p.id === currentReaderId && !p.isDead) {
-            if (!iconEl) playerDiv.insertAdjacentHTML('afterbegin', '<div class="reader-icon">🎙️</div>');
-        } else if (iconEl) {
-            iconEl.remove();
-        }
-
-        // Classes état
-        playerDiv.classList.remove('mutilated', 'executed', 'spectator');
-        if (p.afkCount >= 2 && !p.isDead) playerDiv.classList.add('mutilated');
-        if (p.isDead || p.disconnected) playerDiv.classList.add('executed');
-
-        // Pointeur mutilé
-        const pointerEl = document.getElementById(`pointer-${p.id}`);
-        if (pointerEl) {
-            pointerEl.classList.toggle('mutilated-pointer', p.afkCount >= 2 && !p.isDead);
-        }
-
-        updatePlayerStack(p);
-    });
-
-    // 3. Rendu des spectateurs en haut à gauche
-    let spectatorsContainer = document.getElementById('spectators-container');
-    if (spectatorsContainer) {
-        spectatorsContainer.innerHTML = '';
-        spectators.forEach(s => {
-            const specDiv = document.createElement('div');
-            specDiv.className = 'spectator-badge';
-            specDiv.innerHTML = `<span>👀</span> <span>${s.avatar} ${s.name}</span>`;
-            spectatorsContainer.appendChild(specDiv);
-        });
-    }
-
-    // 4. Nettoyage des éléments DOM obsolètes
-    document.querySelectorAll('.player').forEach(el => {
-        const id = el.id.replace('player-', '');
-        if (!activePlayers.find(p => String(p.id) === id)) el.remove();
-    });
-}
-
-function restorePointers() {
-    // Rien à faire : les pointeurs sont gérés par les événements serveur
-}
-
-function showPointerVisual(voterId, targetId) {
-    const voter = players.find(p => p.id === voterId);
-    const target = players.find(p => p.id === targetId);
-    const pointer = document.getElementById(`pointer-${voterId}`);
-    
-    if (!pointer || !voter || !target) return;
-
-    // 1. Calcul de l'angle cible en degrés
-    const dx = target.centerX - voter.centerX;
-    const dy = target.centerY - voter.centerY;
-    const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-    // 2. CORRECTION BUG 4 : On utilise la propriété persistante dans l'objet joueur
-    if (voter.currentRotation === undefined) {
-        voter.currentRotation = 0;
-    }
-
-    const currentAngle = voter.currentRotation;
-
-    // 3. Calcul du chemin le plus court (Normalisation entre -180 et 180)
-    let delta = (targetAngle - (currentAngle % 360) + 540) % 360 - 180;
-    
-    // 4. Mise à jour de la rotation cumulée persistante
-    voter.currentRotation = currentAngle + delta;
-
-    // 5. Application du style CSS
-    pointer.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s";
-    pointer.style.transform = `rotate(${voter.currentRotation}deg)`;
-    pointer.style.opacity = '1';
-}
-
-function renderPlayers(radiusScale = 1, centerTargetId = null) {
-    const table = document.getElementById('table');
-    const w = table.clientWidth || 480;
-    const h = table.clientHeight || w;
-    const centerX = w / 2;
-    const centerY = h / 2;
-    const radius = (w / 2.5) * radiusScale;
-
-    // 1. On sépare les joueurs actifs et les spectateurs
-    const activePlayers = players.filter(p => !p.isSpectator);
-    const spectators = players.filter(p => p.isSpectator);
-
-    // 2. Rendu des joueurs actifs autour de la table
-    activePlayers.forEach((p, index) => {
-        const angle = (index / activePlayers.length) * Math.PI * 2;
-        let x = centerX + radius * Math.cos(angle) - 45;
-        let y = centerY + radius * Math.sin(angle) - 45;
-
-        if (centerTargetId === p.id) {
-            x = centerX - 45;
-            y = centerY - 45;
-        }
-
-        p.centerX = x + 45;
-        p.centerY = y + 45;
+        p.centerX = x + offset;
+        p.centerY = y + offset;
 
         let playerDiv = document.getElementById(`player-${p.id}`);
         if (!playerDiv) {
@@ -1346,6 +1224,43 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
         if (!activePlayers.find(p => String(p.id) === id)) el.remove();
     });
 }
+
+function restorePointers() {
+    // Rien à faire : les pointeurs sont gérés par les événements serveur
+}
+
+function showPointerVisual(voterId, targetId) {
+    const voter = players.find(p => p.id === voterId);
+    const target = players.find(p => p.id === targetId);
+    const pointer = document.getElementById(`pointer-${voterId}`);
+    
+    if (!pointer || !voter || !target) return;
+
+    // 1. Calcul de l'angle cible en degrés
+    const dx = target.centerX - voter.centerX;
+    const dy = target.centerY - voter.centerY;
+    const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    // 2. CORRECTION BUG 4 : On utilise la propriété persistante dans l'objet joueur
+    if (voter.currentRotation === undefined) {
+        voter.currentRotation = 0;
+    }
+
+    const currentAngle = voter.currentRotation;
+
+    // 3. Calcul du chemin le plus court (Normalisation entre -180 et 180)
+    let delta = (targetAngle - (currentAngle % 360) + 540) % 360 - 180;
+    
+    // 4. Mise à jour de la rotation cumulée persistante
+    voter.currentRotation = currentAngle + delta;
+
+    // 5. Application du style CSS
+    pointer.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s";
+    pointer.style.transform = `rotate(${voter.currentRotation}deg)`;
+    pointer.style.opacity = '1';
+}
+
+ 
 
 // =========================================================
 // ANIMATIONS CINEMATIQUES

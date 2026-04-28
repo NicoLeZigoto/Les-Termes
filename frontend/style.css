@@ -1009,3 +1009,190 @@ input[type=range]::-moz-range-track {
     border: 1px solid #2e4060;
     border-radius: 3px;
 }
+
+/* =========================================================
+   RESPONSIVE DESIGN (MOBILES & TABLETTES)
+   ========================================================= */
+
+   @media (max-width: 900px), (max-height: 750px) {
+    
+    /* 1. Refonte du Layout Global (Passage en vertical) */
+    #game-layout {
+        flex-direction: column;
+        padding: 10px;
+        padding-top: 65px; /* Laisse de l'espace pour les boutons UI en haut */
+        gap: 15px;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    #left-pane {
+        flex: 0 0 45%; /* La table prend 45% de l'écran en haut */
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #right-pane {
+        flex: 1; /* La carte et les infos prennent le reste en bas */
+        max-width: 100%;
+        width: 100%;
+        border-left: none;
+        border-top: 4px solid rgba(46,64,96,0.4);
+        padding: 15px 10px;
+    }
+
+    /* 2. Adaptation des Joueurs et de la Table */
+    #table {
+        width: 100%;
+        max-width: 45vh; /* Évite que la table devienne trop grosse */
+    }
+
+    .player { width: 70px; }
+    
+    .avatar { 
+        width: 60px; 
+        height: 60px; 
+        font-size: 2.2rem; 
+        padding-top: 6px; 
+    }
+    
+    .player-name { 
+        font-size: 0.95rem; 
+        padding: 2px 8px; 
+        margin-top: 2px; 
+    }
+
+    .pointer {
+        top: 30px; 
+        left: 30px;
+    }
+    .pointer::after {
+        left: 40px; 
+        top: -15px; 
+        font-size: 2.5rem;
+    }
+
+    /* 3. Réorganisation de l'UI (Header compact) */
+    #room-badge {
+        bottom: auto;
+        top: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.9rem;
+        padding: 4px 12px;
+    }
+
+    #btn-back-menu {
+        top: 15px;
+        left: 10px;
+        font-size: 0.85rem;
+        padding: 6px 10px;
+    }
+
+    #btn-volume-toggle {
+        top: 15px;
+        left: auto;
+        right: 10px; 
+        font-size: 0.85rem;
+        padding: 6px 10px;
+    }
+
+    #cemetery-btn {
+        top: 55px; /* Juste sous le bouton volume */
+        right: 10px;
+        font-size: 0.85rem;
+        padding: 4px 12px;
+    }
+
+    #spectators-container {
+        top: 55px;
+        left: 10px;
+    }
+
+    /* 4. Optimisation des Textes et des Cartes en jeu */
+    .room-neon-title {
+        font-size: 2.2rem;
+        margin-bottom: 10px;
+    }
+
+    .card {
+        padding: 20px;
+    }
+    
+    .card-text {
+        font-size: 1.6rem;
+        margin: 15px 0;
+    }
+
+    #timer-display {
+        font-size: 4rem;
+    }
+
+    /* 5. Optimisation du Lobby */
+    .hero-title {
+        font-size: 3.5rem;
+    }
+    
+    .hero-desc-box {
+        padding: 15px 20px;
+    }
+    
+    .hero-desc-box p {
+        font-size: 1.3rem;
+    }
+    
+    .hero-floating-cards {
+        height: 140px;
+    }
+
+    .lobby-card, .lobby-wide-card {
+        width: 95vw;
+        padding: 20px;
+    }
+
+    .lobby-card h1 {
+        font-size: 2.5rem;
+    }
+
+    /* 6. Optimisation de l'Avatar Picker */
+    .avatar-picker {
+        grid-template-columns: repeat(4, 50px);
+        grid-template-rows: repeat(2, 50px);
+        gap: 8px;
+    }
+
+    .avatar-option {
+        width: 50px;
+        height: 50px;
+        font-size: 1.8rem;
+        padding-top: 4px;
+    }
+    
+    .avatar-nav-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.4rem;
+    }
+
+    /* 7. Correction tactile Globale */
+    .player, button, .avatar-option, #deck, .selectable-card {
+        touch-action: manipulation;
+    }
+}
+
+/* Ajustements extrêmes pour les très petits écrans (iPhone SE, etc.) */
+@media (max-width: 400px) {
+    #left-pane {
+        flex: 0 0 40%;
+    }
+    .avatar-picker {
+        grid-template-columns: repeat(3, 45px);
+        grid-template-rows: repeat(3, 45px);
+    }
+    .hero-title {
+        font-size: 2.8rem;
+    }
+    .card-text {
+        font-size: 1.3rem;
+    }
+}
