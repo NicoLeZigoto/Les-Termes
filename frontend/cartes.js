@@ -20,6 +20,12 @@ const cartesJSON =[
     { category: "TRASH", text: "Qui est resté mentalement bloqué dans les années 50 vu sa misogynie totalement décomplexée ?", comments:["Pour la millième fois $pseudo, oui les 'bonnes femmes' ont le droit de voter, et non, leur place n'est pas qu'à la cuisine."] },
     { category: "TRASH", text: "Qui est le plus homophobe ?", comments:["La science l'a prouvé : les plus gros homophobes sont juste dans le déni. Assume $pseudo, on t'aimera quand même !", "Ça va finir par pop sur Grindr tout ça..."] },
     { category: "TRASH", text: "Qui est le plus raciste ?", comments:["Le seul 'ami noir' de $pseudo c'est son livreur uber-eat"] },
+    { category: "TRASH", text: "Qui est absolument incapable de garder un secret plus de 5 minutes ?", comments:["« Je te le dis mais tu le répètes pas hein... » 3 minutes plus tard, tout le département est au courant."] },
+    { category: "TRASH", text: "Qui a le profil Facebook de 2011 le plus honteux, avec des citations de fou et un pseudo genre 'xX-Demon-Boy-Xx' ?", comments:["Internet n'oublie jamais $pseudo, et nous non plus."] },
+    { category: "TRASH", text: "Qui a un style tellement vide qu'il passe son temps à copier celui de ses potes ?", comments:["Regarder $pseudo, c'est comme voir un mirroir déformant."] },
+    { category: "TRASH", text: "Qui a le physique le plus difficile à assumer ?", comments:["T'es beau de loin mais loin d'être beau."] },
+    { category: "TRASH", text: "Qui joue la carte du mec/de la meuf 'trop gentil(le)', mais cache en réalité l'âme la plus sombre et toxique de cette pièce ?", comments:["Ne vous fiez pas au sourire de $pseudo.",] },
+
 
 
     // ==========================================
@@ -63,6 +69,7 @@ const cartesJSON =[
     { category: "SEXE", text: "Qui a les fantasmes les plus bizarres ?", comments:["Le BDSM c'est mignon à côté de ce que regarde $pseudo.", "On a vu l'historique. On a rien dit, mais on a vu..."] },
     { category: "SEXE", text: "Qui a le record de la relation la plus courte chronométrée ?", comments:["Une relation ça dure pas le temps d'un snap $pseudo."] },
     { category: "SEXE", text: "Qui a la plus grosse ?", comments: ["T'as un python dans l'slibard $pseudo.", "Hoooo $pseudo et son colosse !"] },
+    { category: "SEXE", text: "Qui a la plus petite ?", comments: ["C'est pas la taille qui compte $pseudo, c'est le goût !"] },
     { category: "SEXE", text: "Qui baise le moins ?", comments:["Alors $pseudo, t'es plutôt mouchoir ou chaussette ?", "Y'a aucun problème avec ça $pseudo. Gros looser."] },
     { category: "SEXE", text: "Qui a le plus de chances d'avoir un OnlyFans secret ?", comments:["Allez pas voir ça en vaut pas la peine", "Abonnement à 4,99€/mois. $pseudo vaut même pas le prix..."] },
     { category: "SEXE", text: "Qui a forcément menti sur son body-count ?", comments:["$pseudo a la même capote dans son portefeuille depuis 10 ans"] },
@@ -71,6 +78,8 @@ const cartesJSON =[
     { category: "SEXE", text: "Qui est le plus susceptible de cacher un compte Pornhub Premium ici ?", comments:["Everyone Knows That... Ulterior Motives... TELL ME THE TRUUUUTH"] },
     { category: "SEXE", text: "Qui pourait mater sa voisine d'en face au travers de son rideau sans qu'elle le sache ?", comments: ["$pseudo a toujours préféré aux voisins les voisines."] },
     { category: "SEXE", text: "Qui possède un sextoy bien caché pour combler le vide de sa vie sentimentale ?", comments:[ "Appuie là."] },
+    { category: "SEXE", text: "Qui, autour de cette table, rêve secrètement de coucher avec un autre joueur ?", comments:["Ah merde ! Tu voulais pas que ça se sache, $pseudo ?"] },
+    { category: "SEXE", text: "Qui, parmi nous, a 100% un fétichisme inavouable, genre les pieds, et n'assumera jamais ?", comments:["Cachez vos orteils, $pseudo a le regard qui glisse.", "T'as le droit d'aimer ce que tu veux, mais garde tes distances."] },
 
     // ==========================================
     // ARGENT
@@ -96,6 +105,9 @@ const cartesJSON =[
     { category: "WTF", text: "Qui a le plus gros dossier photo compromettant dans les téléphones des autres ?", comments:["Le jour où on te fait chanter, t'es ruiné $pseudo."] },
     { category: "WTF", text: "Qui pourrait rejoindre une secte sans s'en rendre compte ?", comments:["Je vous assure que c'est pour les Resto du Cœur que $pseudo sacrifie des chèvres !"] },
     { category: "WTF", text: "Qui ramène systématiquement la faute sur « les banques », « les médias » ou carrément une communauté précise au 'nez crochu' dès qu'il a un problème dans sa vie ?", comments:["Tu comptes acheter le paradis avec tes banques ?"] },
+    { category: "WTF", text: "Qui, autour de cette table, cache DÉFINITIVEMENT une dinguerie inavouable à un autre joueur ?", comments:["Bah quoi, $peudo ? On est la pour dire les termes.", "Ça te ronge de l'intérieur de pas lui dire, hein $pseudo ?","Le jour où ça va sortir, y'a une amitié qui va s'éteindre en direct."] },
+    { category: "WTF", text: "Qui lâche les takes philosophiques les plus éclatées au sol ?", comments:["« Tu sais, si tu l'as pas vécu tu peux pas... » Ferme-la $pseudo." ] },
+
     // ==========================================
     // QUOTIDIEN
     // ==========================================
@@ -115,6 +127,8 @@ const cartesJSON =[
     { category: "QUOTIDIEN", text: "Qui ne va JAMAIS se remettre en question même s'il accumule 500 cartes à ce jeu ?", comments:["Regarde-toi un jour dans le miroir $pseudo. Et va lire Toltèque aussi."] },
     { category: "QUOTIDIEN", text: "Qui prend absolument TOUT au premier degré ?", comments:["Il l'a."] },
     { category: "QUOTIDIEN", text: "Qui ne sait jamais s'arrêter et fait systématiquement la vanne de trop qui rend la situation hyper cringe ?", comments:["Essaye de lire l'intéligence emotionelle ", "On riait AVEC toi à la base. Là on a juste honte POUR toi."] },
+    { category: "QUOTIDIEN", text: "Qui demande des conseils à tout le monde et fait exactement l'inverse de ce qu'on lui a dit ?", comments:["Et après ça vient chialer que ça se passe mal..."] },
+    { category: "QUOTIDIEN", text: "Qui a une chambre ou un appart tellement en bordel qu'il faut enjamber trois tas de fringues et un carton de pizza pour accéder au lit ?", comments:["Ho $pseudo, toi et tes folies !"] },
 
     // ==========================================
     // EGO
@@ -140,7 +154,7 @@ const cartesJSON =[
     // ==========================================
     // STYLE
     // ==========================================
-    { category: "STYLE", text: "Qui s'habille mal ?", comments:["Je m'habille mal ?", "$pseudo, tu t'habilles comme si ta mère t'achetait tes fringues... Est-ce que ta mère t'achète tes fringues ?"] },
+    { category: "STYLE", text: "Qui s'habille mal ?", comments:["'Je m'habille mal ?'", "$pseudo, tu t'habilles comme si ta mère t'achetait tes fringues... Est-ce que ta mère t'achète tes fringues ?"] },
     { category: "STYLE", text: "Qui achète des vêtements hors de prix pour avoir l'air riche mais c'est raté ?", comments:["Un mec moche en Gucci reste un mec moche. Tu le sais pourtant $pseudo...", "$pseudo claque 300€ dans une veste et tout ça pour que ce soient les SDF qui lui donnent de l'argent..."] },
     { category: "STYLE", text: "Qui a eu la pire coupe de cheveux par le passé ?", comments:["$pseudo. Avoue. Même toi tu trouvais ça horrible.", "Le coiffeur de $pseudo a probablement fait de la prison après ça, du moins on lui souhaite"] },
     { category: "STYLE", text: "Qui a les pires goûts musicaux ?", comments:["$pseudo pisse littéralement dans des violons..."] },
@@ -156,6 +170,7 @@ const cartesJSON =[
     { category: "SURVIE", text: "S'il y avait un Battle Royale entre nous là tout de suite, qui se ferait fracasser en premier ?", comments: ["Non $pseudo, être bon aux jeux de combat va pas t'aider ici."] },
     { category: "SURVIE", text: "Qui a le plus de chances de se faire racketter dans une ruelle sombre ?", comments:["Tu veux mourrir ou quoi ?", "J'ai entendu 'Fils de pute va.'"] },
     { category: "SURVIE", text: "En cas d'urgence à 3h du mat, qui faut-il SURTOUT PAS appeler ?", comments:["« Ah ouais c'est chaud ton truc... Bon, je te laisse, ma game commence. »"] },
+    { category: "SURVIE", text: "Dans une situation de vie ou de mort, qui n'hésiterait pas une seconde à sacrifier un de ses potes pour sauver sa propre peau ?", comments:["Un grand Homme a dit 'On est tous égoïste' donc bon..."] },
 
     // ==========================================
     // BOULOT
@@ -167,5 +182,4 @@ const cartesJSON =[
     { category: "BOULOT", text: "Qui pourrait complètement se la couler douce au chômage ?", comments: ["Fais des gosses $pseudo, ça rapporte gros !"] },
     { category: "BOULOT", text: "Qui enverrait un mail à son boss bourré ?", comments:["Objet : 'AUGMENTATION OU JE ME CASSE'. Envoyé à 2h37, Regretté à 8h00", "Et c'est une fin de carrière pour $pseudo"] }
 ];
-
 

@@ -91,15 +91,15 @@ const PSEUDO_PLACEHOLDERS = [
     "Ex: Joe Dash", "Ex: Le T", "Ex: Brakav", "Ex: Polux", "Ex: Belbit",
     "Ex: Guendoul", "Ex: Ricky La Pénave", "Ex: Jonny L'horloger",
     "Ex: Tromax", "Ex: Ératosthène", "Ex: Marluxia", "Ex: DROP TABLE users; --force",
-    "Ex: PILOTE", "Ex: Alphonse D'audrey de la cour des Fleurs", "Hey",
-    "Croquette", "Chouquette", "Monsieur Poitoux", "Bétadine",
-    "Roseau", "Boca", "Chausette"
+    "Ex: PILOTE", "Ex: Alphonse D'audrey de la cour des Fleurs", "Ex: Hey",
+    "Ex: Croquette", "Ex: Chouquette", "Ex: Monsieur Poitoux", "Ex: Bétadine",
+    "Ex: Roseau", "Ex: Boca", "Ex: Chausette", 'Ex: Mario 2 le 2', 
 ];
 
 const ROOM_NAME_PLACEHOLDERS = [
     "Soirée Raclette", "Le Tribunal", "Règlement de comptes", "Fin des amitiés",
     "Entre Traîtres", "Le Dîner de Cons", "Guerre Froide", "Bain de sang",
-    "Réunion de crise", "Le Conseil", "Copains mais pas gays", "Sucé-En-Bris"
+    "Réunion de crise", "Le Conseil", "Copains mais pas gays", "Sucé-En-Bris", "Red Room"
 ];
 
 const IDENTITY_SUBTITLES = [
