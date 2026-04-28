@@ -108,14 +108,7 @@ const IDENTITY_SUBTITLES = [
     "Balance ton blaze (et ton 06 si tu veux).", "PTDR T KI ?"
 ];
 
-const AVATAR_PAGE_SIZE = 10;
-const AVATAR_CHOICES = [
-    "😇", "😎", "🤓", "🤡", "🤠", "👽", "👻", "🤖", "💩", "💀",
-    "🐵", "🐶", "🐺", "🦊", "🐱", "🦁", "🐯", "🐴", "🦄", "🐷",
-    "🐸", "🐼", "🐨", "🐻", "🐔", "🐧", "🦆", "🦉", "🦇", "🐝",
-    "🐢", "🐍", "🐙", "🦀", "🐬", "🐳", "🦈", "🐊", "🦖", "🐉",
-    "🔥", "⚡", "💎", "🍀", "🍕", "🍔", "🌮", "🎮", "🚀", "👑"
-];
+// (avatars SVG définis dans avatars.js)
 
 const CARD_SKIN_STORAGE_KEY = 'les-termes-card-skin';
 const CARD_SKINS = [
@@ -166,8 +159,6 @@ let pendingThreeCards = [];
 
 // Skin sélectionné
 let selectedCardSkinId = CARD_SKINS[0].id;
-let selectedAvatar = AVATAR_CHOICES[0];
-let avatarPageIndex = 0;
 let identitySubtitleInterval = null;
 let lastIdentitySubtitleIndex = -1;
 
@@ -204,7 +195,7 @@ function createRoom() {
     }
 
     socket.emit('create_room', {
-        playerData: { name: pseudo, avatar: selectedAvatar },
+        playerData: { name: pseudo, avatarCode: myAvatarCode },
         roomName,
         scoreToWin,
         voteMode,
@@ -219,7 +210,7 @@ function joinRoom() {
 
     socket.emit('join_room', {
         roomCode: code,
-        playerData: { name: pseudo, avatar: selectedAvatar }
+        playerData: { name: pseudo, avatarCode: myAvatarCode }
     });
 }
 
@@ -294,6 +285,17 @@ socket.on('update_players', (data) => {
 });
 
 socket.on('error_msg', (msg) => showNotification(msg));
+
+socket.on('avatar_updated', (data) => {
+    const player = players.find(p => p.id === data.playerId);
+    if (player) {
+        player.avatarCode = data.avatarCode;
+        const avatarEl = document.getElementById(`avatar-${player.id}`);
+        if (avatarEl) {
+            avatarEl.innerHTML = generateAvatarSVG(player.avatarCode, 70);
+        }
+    }
+});
 
 function enterGame(phase = 'lobby') {
     document.getElementById('lobby-screen').classList.add('hidden');
@@ -1170,7 +1172,11 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
         // Mise à jour avatar
         const avatarEl = document.getElementById(`avatar-${p.id}`);
         if (avatarEl) {
-            avatarEl.innerText = p.avatar;
+            if (p.avatarCode) {
+                avatarEl.innerHTML = generateAvatarSVG(p.avatarCode, 70);
+            } else {
+                avatarEl.innerText = p.avatar || '?';
+            }
             if (window._tieBreakCandidates && window._tieBreakCandidates.includes(p.id)) {
                 avatarEl.classList.add('tie-candidate');
             }
@@ -1205,7 +1211,8 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
         spectators.forEach(s => {
             const specDiv = document.createElement('div');
             specDiv.className = 'spectator-badge';
-            specDiv.innerHTML = `<span>👀</span> <span>${s.avatar} ${s.name}</span>`;
+            const specAv = s.avatarCode ? generateAvatarSVG(s.avatarCode, 22) : (s.avatar || '👤');
+            specDiv.innerHTML = `<span>👀</span> <span style="display:inline-flex;align-items:center;gap:4px">${specAv} ${s.name}</span>`;
             spectatorsContainer.appendChild(specDiv);
         });
     }
@@ -1299,7 +1306,11 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
 
         const avatarEl = document.getElementById(`avatar-${p.id}`);
         if (avatarEl) {
-            avatarEl.innerText = p.avatar;
+            if (p.avatarCode) {
+                avatarEl.innerHTML = generateAvatarSVG(p.avatarCode, 70);
+            } else {
+                avatarEl.innerText = p.avatar || '?';
+            }
             if (window._tieBreakCandidates && window._tieBreakCandidates.includes(p.id)) {
                 avatarEl.classList.add('tie-candidate');
             }
@@ -1333,7 +1344,8 @@ function renderPlayers(radiusScale = 1, centerTargetId = null) {
         spectators.forEach(s => {
             const specDiv = document.createElement('div');
             specDiv.className = 'spectator-badge';
-            specDiv.innerHTML = `<span>👀</span> <span>${s.avatar} ${s.name}</span>`;
+            const specAv = s.avatarCode ? generateAvatarSVG(s.avatarCode, 22) : (s.avatar || '👤');
+            specDiv.innerHTML = `<span>👀</span> <span style="display:inline-flex;align-items:center;gap:4px">${specAv} ${s.name}</span>`;
             spectatorsContainer.appendChild(specDiv);
         });
     }
@@ -1561,7 +1573,7 @@ async function triggerTieAnimation(tiedPlayerIds) {
 
     const tiedNames = tiedPlayerIds
         .map(id => players.find(p => p.id === id)).filter(Boolean)
-        .map(p => `${p.avatar} ${p.name}`).join(' vs ');
+        .map(p => p.name).join(' vs ');
     showNotification(`⚡ ÉGALITÉ ! ${tiedNames}`);
 
     const tiedPlayers = tiedPlayerIds.map(id => players.find(p => p.id === id)).filter(Boolean);
@@ -1688,7 +1700,7 @@ function endGameBecauseDeckIsEmpty() {
         showNotification("🃏 Plus de cartes disponibles : fin de partie !");
         showVictory(winners[0]);
         const msg = document.getElementById('victory-message');
-        if (msg) msg.innerHTML = `${winners[0].avatar} <strong>${winners[0].name}</strong> remporte la partie : le deck est vide.`;
+        if (msg) msg.innerHTML = `${winners[0].avatarCode ? `<span style="display:inline-block;vertical-align:middle">${generateAvatarSVG(winners[0].avatarCode, 32)}</span>` : (winners[0].avatar || '')} <strong>${winners[0].name}</strong> remporte la partie : le deck est vide.`;
         return;
     }
     
@@ -1719,7 +1731,7 @@ function showVictory(winner) {
         replayBtn.innerText = "Rejouer";
     }
 
-    document.getElementById('victory-title').innerHTML = `👑 ${winner.name} ${winner.avatar}`;
+    document.getElementById('victory-title').innerHTML = `👑 ${winner.name} ${winner.avatarCode ? `<span style="display:inline-block;vertical-align:middle">${generateAvatarSVG(winner.avatarCode, 48)}</span>` : (winner.avatar || '')}`;
     document.getElementById('victory-message').innerHTML = `<strong>${winner.name}</strong> remporte la partie avec ${winner.score} points !`;
     renderRivalrySummary();
     renderEndgameCardsSummary(winner);
@@ -1742,7 +1754,10 @@ function showTie(winners) {
     }
 
     const score = winners[0].score;
-    const names = winners.map(w => `${w.avatar} <strong>${w.name}</strong>`).join(', ');
+    const names = winners.map(w => {
+        const av = w.avatarCode ? `<span style="display:inline-block;vertical-align:middle">${generateAvatarSVG(w.avatarCode, 32)}</span>` : (w.avatar || '');
+        return `${av} <strong>${w.name}</strong>`;
+    }).join(', ');
 
     document.getElementById('victory-title').innerHTML = `⚖️ ÉGALITÉ ⚖️`;
     document.getElementById('victory-message').innerHTML =
@@ -1948,32 +1963,8 @@ function initLobbyUI() {
     const roomInput = document.getElementById('input-room-name');
     if (roomInput) roomInput.placeholder = ROOM_NAME_PLACEHOLDERS[Math.floor(Math.random() * ROOM_NAME_PLACEHOLDERS.length)];
 
-    const avatarPicker = document.getElementById('avatar-picker');
-    const avatarNextBtn = document.getElementById('avatar-next-btn');
-
-    const renderAvatarPage = () => {
-        if (!avatarPicker) return;
-        const start = avatarPageIndex * AVATAR_PAGE_SIZE;
-        avatarPicker.innerHTML = AVATAR_CHOICES.slice(start, start + AVATAR_PAGE_SIZE).map(a =>
-            `<div class="avatar-option${a === selectedAvatar ? ' selected' : ''}" data-value="${a}">${a}</div>`
-        ).join('');
-    };
-
-    if (avatarPicker) {
-        renderAvatarPage();
-        avatarPicker.addEventListener('click', e => {
-            if (e.target.classList.contains('avatar-option')) {
-                selectedAvatar = e.target.dataset.value;
-                renderAvatarPage();
-            }
-        });
-    }
-    if (avatarNextBtn) {
-        avatarNextBtn.addEventListener('click', () => {
-            avatarPageIndex = (avatarPageIndex + 1) % Math.ceil(AVATAR_CHOICES.length / AVATAR_PAGE_SIZE);
-            renderAvatarPage();
-        });
-    }
+    // Init du créateur d'avatar SVG
+    initAvatarPicker();
 }
 
 if (document.readyState === 'loading') {
@@ -2045,7 +2036,10 @@ function showPlayerCards(playerId) {
     const player = players.find(p => p.id === playerId);
     if (!player || !player.wonCards.length) return;
     const overlay = document.getElementById('player-cards-overlay');
-    document.getElementById('player-cards-title').innerText = `${player.avatar} ${player.name} — ${player.wonCards.length} carte${player.wonCards.length > 1 ? 's' : ''}`;
+    const avatarTitleDisplay = player.avatarCode
+        ? `<span style="display:inline-block;vertical-align:middle">${generateAvatarSVG(player.avatarCode, 32)}</span>`
+        : (player.avatar || '');
+    document.getElementById('player-cards-title').innerHTML = `${avatarTitleDisplay} ${player.name} — ${player.wonCards.length} carte${player.wonCards.length > 1 ? 's' : ''}`;
     const container = document.getElementById('player-cards-list');
     container.innerHTML = '';
     const hand = document.createElement('div');
@@ -2117,7 +2111,10 @@ function getTopTargets(votesMap) {
 
 function formatRivals(ids, fallback = "personne") {
     if (!ids.length) return fallback;
-    const names = ids.map(id => players.find(p => p.id === id)).filter(Boolean).map(p => `${p.avatar} ${p.name}`);
+    const names = ids.map(id => players.find(p => p.id === id)).filter(Boolean).map(p => {
+        const av = p.avatarCode ? `<span style="display:inline-block;vertical-align:middle">${generateAvatarSVG(p.avatarCode, 22)}</span>` : (p.avatar || '');
+        return `${av} ${p.name}`;
+    });
     if (!names.length) return fallback;
     if (names.length === 1) return names[0];
     return `${names.slice(0, -1).join(', ')} et ${names[names.length - 1]}`;
@@ -2169,7 +2166,7 @@ function renderEndgameCardsSummary(winnerOrWinners) {
             : `<p class="endgame-empty">Aucune carte gagnée.</p>`;
         row.innerHTML = `
             <div class="endgame-player-head">
-                <div class="endgame-player-name">${player.avatar} ${player.name}${isWinner ? (winnerIds.length > 1 ? ' ⚖️' : ' 👑') : ''}</div>
+                <div class="endgame-player-name">${player.avatarCode ? `<span style="display:inline-block;vertical-align:middle">${generateAvatarSVG(player.avatarCode, 28)}</span>` : (player.avatar || '')} ${player.name}${isWinner ? (winnerIds.length > 1 ? ' ⚖️' : ' 👑') : ''}</div>
                 <div class="endgame-player-score">${player.score} point${player.score > 1 ? 's' : ''}</div>
             </div>
             <div class="endgame-cards-row">${cardsHTML}</div>

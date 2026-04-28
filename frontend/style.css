@@ -1009,3 +1009,217 @@ input[type=range]::-moz-range-track {
     border: 1px solid #2e4060;
     border-radius: 3px;
 }
+
+/* =============================================================
+   AJOUT style.css — Styles pour le système d'avatars SVG
+   Ajouter ces règles à la fin de style.css
+   ============================================================= */
+
+/* ── Créateur d'avatar (Lobby) ───────────────────────────────── */
+.avatar-creator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 4px 0 8px;
+}
+
+/* Zone de préview centrale */
+.avatar-preview-zone {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 50%;
+    width: 140px;
+    height: 140px;
+    box-shadow: 0 0 24px rgba(0,0,0,0.35);
+    transition: border-color 0.3s;
+    margin-bottom: 4px;
+}
+
+.avatar-preview-zone:hover {
+    border-color: rgba(255,255,255,0.28);
+}
+
+/* ── Palette de couleurs ─────────────────────────────────────── */
+.avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.avatar-section-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7a8fa8;
+    font-weight: 600;
+}
+
+.color-palette {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+}
+
+.color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.color-swatch:hover {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.35);
+}
+
+.color-swatch.active {
+    border-color: #fff;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.6), 0 0 10px rgba(255,255,255,0.2);
+    transform: scale(1.15);
+}
+
+/* ── Sélecteurs de traits (yeux / bouche / silhouette) ───────── */
+.avatar-selector-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.avatar-nav-arrow {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #e8ddd0;
+    font-size: 1.1rem;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+    flex-shrink: 0;
+}
+
+.avatar-nav-arrow:hover {
+    background: rgba(255,255,255,0.16);
+    transform: scale(1.08);
+}
+
+.avatar-nav-arrow:active {
+    transform: scale(0.95);
+}
+
+.avatar-trait-preview {
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+/* ── Bouton aléatoire ─────────────────────────────────────────── */
+.btn-random-avatar {
+    background: rgba(52, 152, 219, 0.18);
+    border: 1.5px solid rgba(52, 152, 219, 0.4);
+    color: #a8d4f5;
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 8px 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s, border-color 0.2s;
+    letter-spacing: 0.03em;
+    margin-top: 4px;
+}
+
+.btn-random-avatar:hover {
+    background: rgba(52, 152, 219, 0.3);
+    border-color: rgba(52, 152, 219, 0.7);
+    transform: scale(1.03);
+}
+
+.btn-random-avatar:active {
+    transform: scale(0.97);
+}
+
+/* ── Avatar SVG dans le jeu (table ronde) ────────────────────── */
+.avatar {
+    /* Conserver les dimensions existantes mais accueillir du SVG */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;          /* évite le padding des emoji */
+    font-size: 2.2rem;       /* fallback si emoji encore utilisé */
+    overflow: visible;
+}
+
+.avatar svg {
+    /* L'SVG généré n'a pas de marge implicite */
+    display: block;
+    overflow: visible;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+    transition: filter 0.2s;
+}
+
+/* État survol / sélection pendant le vote */
+.avatar.selected-target svg,
+.avatar.tie-candidate svg {
+    filter: drop-shadow(0 0 8px rgba(230,126,22,0.9));
+}
+
+.avatar.validated svg {
+    filter: drop-shadow(0 0 6px rgba(46,204,113,0.9));
+}
+
+/* Animation de tremblement (ciblé) */
+.avatar.avatar-squash svg {
+    animation: squash-anim 0.3s ease;
+}
+
+/* Spectateur badge avec mini SVG avatar */
+.spectator-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.spectator-badge span:last-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ── Responsive : réduire le créateur sur mobile ─────────────── */
+@media (max-width: 480px) {
+    .avatar-preview-zone {
+        width: 110px;
+        height: 110px;
+    }
+
+    .color-swatch {
+        width: 24px;
+        height: 24px;
+    }
+
+    .avatar-creator {
+        gap: 10px;
+    }
+}
