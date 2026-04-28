@@ -70,9 +70,10 @@ function handlePlayerDeparture(socket, roomCode) {
             if (nextReader) {
                 room.currentReaderId = nextReader.id;
                 
+                // CORRECTION BUG 5 : Réinitialisation si la phase est reading
                 if (room.phase === 'reading' || room.phase === 'drawing') {
                     room.phase = 'drawing';
-                    room.currentCard = null; 
+                    room.currentCard = null; // On annule la carte en cours pour le nouveau lecteur
                     
                     if (room.pendingCards) {
                         room.deck.push(...room.pendingCards);
@@ -85,29 +86,22 @@ function handlePlayerDeparture(socket, roomCode) {
             }
         }
 
-        // CORRECTION : Délai de grâce de 10s avant de fermer la partie
-        setTimeout(() => {
-            if (!rooms[roomCode]) return;
-            
-            const alive = rooms[roomCode].players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
-            
-            // On ne déclenche le Game Over que si on est toujours < 3 après 10 secondes
-            if (alive.length <= 2 && rooms[roomCode].phase !== 'lobby' && rooms[roomCode].phase !== 'game_over') {
-                clearTimer(rooms[roomCode]);
-                if (alive.length > 0) {
-                    const allActive = rooms[roomCode].players.filter(p => !p.isSpectator);
-                    rooms[roomCode].phase = 'game_over'; // On verrouille l'état
-                    emitGameOver(roomCode, allActive);
-                }
+        // Vérifier si la partie doit se terminer
+        const alive = room.players.filter(p => !p.isDead && !p.disconnected && !p.isSpectator);
+        if (alive.length <= 2) {
+            clearTimer(room);
+            if (alive.length > 0) {
+                const allActive = room.players.filter(p => !p.isSpectator);
+                emitGameOver(roomCode, allActive);
             }
-        }, 10000); 
-
+        }
         return;
     }
 
-    // --- LOGIQUE LOBBY ---
+    // En lobby : suppression propre du joueur
     room.players.splice(playerIndex, 1);
 
+    // Sécurité Countdown
     const activePlayers = room.players.filter(p => !p.isSpectator);
     if (room.countdownTimer && activePlayers.length < 3) {
         clearTimeout(room.countdownTimer);
@@ -117,6 +111,7 @@ function handlePlayerDeparture(socket, roomCode) {
         });
     }
 
+    // Room vide
     if (room.players.length === 0) {
         room._emptyTimer = setTimeout(() => {
             if (rooms[roomCode] && rooms[roomCode].players.length === 0) {
@@ -126,6 +121,7 @@ function handlePlayerDeparture(socket, roomCode) {
         return;
     }
 
+    // Passage de flambeau (chef de lobby)
     if (room.currentReaderId === socket.id) {
         const nextReader = room.players.find(p => !p.isDead && !p.disconnected && !p.isSpectator);
         if (nextReader) {
@@ -403,7 +399,6 @@ function startVotePhase(roomCode, isTieBreak = false, tieBreakCandidates = []) {
     // Tick toutes les secondes pour synchronisation
     room.tickRef = setInterval(() => {
         remaining--;
-        room.currentTimerValue = remaining; 
         io.to(roomCode).emit('timer_tick', { remaining });
 
         // Fast-forward : si tout le monde a voté
@@ -483,27 +478,17 @@ socket.on('join_room', (data) => {
     const room = rooms[roomCode];
     if (!room) return socket.emit('error_msg', "Room introuvable !");
 
+    // Annuler le timer de destruction si quelqu'un rejoint une room vide
     if (room._emptyTimer) {
         clearTimeout(room._emptyTimer);
         room._emptyTimer = null;
         console.log(`✅ Timer de destruction annulé pour room ${roomCode} — nouveau joueur`);
     }
 
-    // Gestion de la reconnexion après un Game Over
-    if (room.phase === 'game_over') {
-        const allActive = room.players.filter(p => !p.isSpectator);
-        const maxScore = Math.max(...allActive.map(p => p.score));
-        const winners = allActive.filter(p => p.score === maxScore);
-
-        return socket.emit('game_over', {
-            winnerId: winners.length === 1 ? winners[0].id : null,
-            winnerIds: winners.map(w => w.id),
-            players: room.players
-        });
-    }
-
+    // CORRECTION BUG 2 : On récupère la liste des joueurs ayant déjà validé leur vote
     const votedPlayers = Object.keys(room.votes || {});
 
+    // Éviter les doublons (reconnexion rapide)
     const existing = room.players.find(p => p.id === socket.id);
     if (existing) {
         return socket.emit('room_joined', {
@@ -516,21 +501,21 @@ socket.on('join_room', (data) => {
             phase: room.phase,
             currentCard: room.currentCard,
             isVoting: room.isVoting,
-            votedPlayers 
+            votedPlayers // Injecté ici
         });
     }
-
     const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
     room.players.push(newPlayer);
     socket.join(roomCode);
 
+    // Si la room n'a plus de chef valide (ex: tous passés spectateurs), le nouveau joueur devient chef
     const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
     if (!currentReaderValid && room.phase === 'lobby') {
         room.currentReaderId = socket.id;
-        newPlayer.isSpectator = false; 
+        newPlayer.isSpectator = false; // Le nouveau chef est automatiquement joueur
         console.log(`👑 ${newPlayer.name} devient automatiquement chef de la room ${roomCode}`);
     }
-
+    // Sécurité : Si c'est le premier à rejoindre ou s'il n'y a que des spectateurs
     const activePlayers = room.players.filter(p => !p.isSpectator);
     if (activePlayers.length === 0) {
         room.phase = 'lobby';
@@ -545,12 +530,14 @@ socket.on('join_room', (data) => {
         voteMode: room.voteMode,
         scoreToWin: room.scoreToWin,
         phase: room.phase,
+        // On s'assure d'envoyer null si on est en lobby
         currentCard: room.phase === 'lobby' ? null : room.currentCard,
         isVoting: room.phase === 'lobby' ? false : room.isVoting,
-        votedPlayers 
+        votedPlayers // Injecté ici
     });
 
     socket.to(roomCode).emit('player_joined', { players: room.players, newPlayer });
+    // Notifier la room du nouveau currentReaderId si changement
     socket.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
     console.log(`${newPlayer.name} (${socket.id}) a rejoint la room ${roomCode} en tant que spectateur. Total joueurs: ${room.players.length}`);
 });
@@ -604,7 +591,7 @@ socket.on('toggle_role', (roomCode) => {
         // CORRECTION BUG 1 : Empêcher le double lancement si le timer existe déjà
         if (room.countdownTimer) return;
     
-        // 1. Re-balayage pour s'assurer qu'un chef est bien désigné
+        // 1. [ORIGINAL] Re-balayage pour s'assurer qu'un chef est bien désigné
         const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
         if (!currentReaderValid) {
             const firstActive = room.players.find(p => !p.isSpectator && !p.isDead);
@@ -613,16 +600,16 @@ socket.on('toggle_role', (roomCode) => {
             }
         }
     
-        // 2. Seul le chef peut lancer
+        // 2. [ORIGINAL] Seul le chef peut lancer
         if (room.currentReaderId !== socket.id) return;
     
-        // 3. Check du nombre minimum de joueurs
+        // 3. [ORIGINAL] Check du nombre minimum de joueurs
         const activePlayers = room.players.filter(p => !p.isSpectator);
         if (activePlayers.length < 3) {
             return socket.emit('error_msg', "Il faut au moins 3 joueurs actifs pour démarrer !");
         }
     
-        // 4. Lancement du compte à rebours avec stockage du Timer
+        // 4. [NOUVEAU] Lancement du compte à rebours avec stockage du Timer
         io.to(roomCode).emit('game_countdown', { seconds: 5 });
     
         // On stocke le timer dans l'objet room pour pouvoir l'annuler si besoin
@@ -638,8 +625,8 @@ socket.on('toggle_role', (roomCode) => {
         }, 5000);
     });
 
-socket.on('replay_game', (data) => {
-        const { roomCode } = data; // CORRECTION BUG 3 : On n'accepte plus le deck venant du client
+    socket.on('replay_game', (data) => {
+        const { roomCode } = data; // BUG 3 FIX : On n'accepte plus le deck venant du client
         const room = rooms[roomCode];
         if (!room) return;
         
@@ -650,7 +637,7 @@ socket.on('replay_game', (data) => {
         if (room.phase !== 'lobby') {
             room.phase = 'lobby';
 
-            // CORRECTION BUG 3 : On conserve le deck existant côté serveur 
+            // BUG 3 FIX : On conserve le deck existant côté serveur (ne jamais le remplacer par le client)
             // On construit la liste des cartes à exclure : cimetière + cartes gagnées par les joueurs
             const excludedTexts = new Set([
                 ...room.cemetery.map(c => c.text),
@@ -660,7 +647,7 @@ socket.on('replay_game', (data) => {
             // On filtre le deck courant pour ne garder que les cartes non brûlées / non gagnées
             room.deck = room.deck.filter(c => !excludedTexts.has(c.text));
 
-            // CORRECTION BUG 3 : Vérification sécurité — si le deck est trop petit, on l'alerte
+            // BUG 3 FIX : Vérification sécurité — si le deck est trop petit, on l'alerte
             if (room.deck.length < room.scoreToWin) {
                 socket.emit('error_msg', `⚠️ Plus assez de cartes (${room.deck.length} restantes) pour finir une partie. Veuillez relancer avec un nouveau paquet.`);
                 // On continue quand même pour permettre une courte partie

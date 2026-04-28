@@ -391,18 +391,18 @@ socket.on('game_reset_state', (data) => {
     document.getElementById('player-cards-overlay').classList.add('hidden');
     document.getElementById('card-selection-overlay').classList.add('hidden');
 
-    // CORRECTION BUG 2 : Arrêt explicite des sons de boucle pouvant rester actifs
+    // BUG 2 FIX : Arrêt explicite des sons de boucle pouvant rester actifs
     audioManager.stopSound('heartbeat', { volume: 0.2 });
     audioManager.stopSound('vote-tick');
     audioManager.stopSound('countdown_clock');
 
-    // CORRECTION BUG 2 : Nettoyage des classes d'état sur le body et les avatars
+    // BUG 2 FIX : Nettoyage des classes d'état sur le body et les avatars
     document.body.classList.remove('urgent-flash');
     document.querySelectorAll('.avatar').forEach(el => {
         el.classList.remove('tie-candidate', 'selected-target', 'validated');
     });
 
-    // CORRECTION BUG 2 : Remise à zéro des pointeurs (opacité + transform) et de currentRotation
+    // BUG 2 FIX : Remise à zéro des pointeurs (opacité + transform) et de currentRotation
     players.forEach(p => {
         p.currentRotation = 0;
         const ptr = document.getElementById(`pointer-${p.id}`);
