@@ -545,7 +545,7 @@
       .slow-move { transition: left 2.5s cubic-bezier(0.25, 1, 0.5, 1), top 2.5s cubic-bezier(0.25, 1, 0.5, 1), transform 2.5s ease !important; }
       
       #right-pane {
-          flex: 1; display: flex; justify-content: flex-start; align-items: stretch;
+          flex: 1; display: flex; justify-content: center; align-items: center;
           flex-direction: column; padding: 42px; min-width: 0; max-width: 50%;
           height: 100%; overflow-y: auto; position: relative;
           border-left: 4px solid rgba(46,64,96,0.4);
@@ -895,55 +895,16 @@
     background: rgba(39, 174, 96, 0.1);
 }
 
-/* ── Lobby Interactive Zone (3 zones) ───────────────────── */
-#lobby-interactive-zone {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    flex: 1;               /* prend tout l'espace vertical dispo dans #right-pane */
-    min-height: 0;
-    gap: 0;
-}
-
-#liz-top {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding-bottom: 18px;
-}
-
-#liz-center {
-    flex: 1;               /* zone souple — s'étire pour respirer */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 18px;
-    padding: 20px 0;
-}
-
-#liz-bottom {
-    min-height: 160px;     /* hauteur réservée : pas de saut quand vide */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding-top: 10px;
-}
-
-/* Le countdown n'est plus un overlay absolu — simple bloc dans liz-bottom */
 #game-countdown-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 26, 38, 0.8);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    animation: fadeInUp 0.3s ease;
-}
-
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
+    justify-content: center;
+    z-index: 100;
+    border-radius: 20px;
 }
 
 #start-controls {
@@ -957,7 +918,6 @@
     gap: 15px;
     width: 100%;
     box-sizing: border-box;
-    animation: fadeInUp 0.25s ease;
 }
 
 .countdown-number {

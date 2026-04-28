@@ -345,8 +345,8 @@ function startGameFromLobby() {
 }
 
 socket.on('game_started', (data) => {
-    const countdownEl = document.getElementById('game-countdown-overlay');
-    if (countdownEl) countdownEl.classList.add('hidden');
+    const countdownOverlay = document.getElementById('game-countdown-overlay');
+    if (countdownOverlay) countdownOverlay.classList.add('hidden');
     isCountingDown = false;
 
     audioManager.stopSound('countdown_clock');
@@ -1066,27 +1066,23 @@ let isCountingDown = false;
 
 // Le socket du compte à rebours est parfait ici
 socket.on('game_countdown', (data) => {
-    const countdownEl = document.getElementById('game-countdown-overlay');
+    const overlay = document.getElementById('game-countdown-overlay');
     const val = document.getElementById('countdown-val');
-
-    // Transition fine : seuls les contrôles de lancement disparaissent
+    overlay.classList.remove('hidden');
     document.getElementById('start-controls').classList.add('hidden');
     document.getElementById('waiting-text').classList.add('hidden');
-    // Le titre de la room (#liz-top) et le bouton de rôle (#role-toggle-area) restent visibles
-
-    countdownEl.classList.remove('hidden');
     isCountingDown = true;
-
+    
     audioManager.playSound('countdown_clock', { volume: 0.2 });
-
+    
     let count = data.seconds;
     val.innerText = count;
-
+    
     const interval = setInterval(() => {
         count--;
         if (count <= 0) {
             clearInterval(interval);
-            countdownEl.classList.add('hidden');
+            overlay.classList.add('hidden');
         } else {
             val.innerText = count;
             audioManager.playSound('vote-tick', { volume: 0.2 });
@@ -1096,15 +1092,14 @@ socket.on('game_countdown', (data) => {
 
 socket.on('countdown_cancelled', (data) => {
     isCountingDown = false;
-    const countdownEl = document.getElementById('game-countdown-overlay');
-    if (countdownEl) countdownEl.classList.add('hidden');
-
+    const overlay = document.getElementById('game-countdown-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    
     audioManager.stopSound('countdown_clock');
     audioManager.playSound('ui_fail', { volume: 0.2 });
-
+    
     showNotification(`🚫 ${data.reason}`);
-
-    // Restore the zone layout cleanly
+    
     prepareNextTurn();
 });
 
