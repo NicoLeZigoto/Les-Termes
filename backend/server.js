@@ -444,12 +444,7 @@ io.on('connection', (socket) => {
 
         rooms[roomCode] = {
             roomName: safeRoomName,
-            players: [{
-                name: playerData.name,
-                avatarCode: playerData.avatarCode || null,
-                id: socket.id, score: 0, afkCount: 0,
-                isDead: false, isSpectator: false, wonCards: []
-            }], // Le créateur est joueur
+            players: [{ ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: false, wonCards: [] }], // Le créateur est joueur
             currentReaderId: socket.id,
             deck: [...deck],
             cemetery: [],
@@ -509,12 +504,7 @@ socket.on('join_room', (data) => {
             votedPlayers // Injecté ici
         });
     }
-    const newPlayer = {
-        name: playerData.name,
-        avatarCode: playerData.avatarCode || null,
-        id: socket.id, score: 0, afkCount: 0,
-        isDead: false, isSpectator: true, wonCards: []
-    };
+    const newPlayer = { ...playerData, id: socket.id, score: 0, afkCount: 0, isDead: false, isSpectator: true, wonCards:[] };
     room.players.push(newPlayer);
     socket.join(roomCode);
 
@@ -592,33 +582,6 @@ socket.on('toggle_role', (roomCode) => {
         io.to(roomCode).emit('reader_changed', { newReaderId: room.currentReaderId });
     }
 });
-
-    // ------ MISE À JOUR AVATAR ------
-
-    socket.on('update_avatar', (data) => {
-        const { roomCode, avatarCode } = data;
-        const room = rooms[roomCode];
-        if (!room) return;
-
-        const player = room.players.find(p => p.id === socket.id);
-        if (!player) return;
-
-        if (!avatarCode || typeof avatarCode !== 'object') return;
-        if (typeof avatarCode.color !== 'string') return;
-
-        player.avatarCode = {
-            color: avatarCode.color,
-            shapeId: parseInt(avatarCode.shapeId) || 1,
-            eyesId: parseInt(avatarCode.eyesId) || 1,
-            mouthId: parseInt(avatarCode.mouthId) || 1,
-            accessoryId: parseInt(avatarCode.accessoryId) || 0
-        };
-
-        io.to(roomCode).emit('avatar_updated', {
-            playerId: socket.id,
-            avatarCode: player.avatarCode
-        });
-    });
 
     // ------ DÉMARRAGE DE PARTIE ET REJOUER ------
     socket.on('start_game', (roomCode) => {
@@ -704,7 +667,6 @@ socket.on('toggle_role', (roomCode) => {
                 p.isDead = false;
                 p.isSpectator = true; // Par défaut, replacer le joueur en spectateur
                 p.wonCards = [];
-                // avatarCode est préservé intentionnellement
             });
         }
 
