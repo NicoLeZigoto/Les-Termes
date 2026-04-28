@@ -70,7 +70,7 @@ function handlePlayerDeparture(socket, roomCode) {
             if (nextReader) {
                 room.currentReaderId = nextReader.id;
                 
-                // CORRECTION BUG 5 : Réinitialisation si la phase est reading
+                // CORRECTION BUG 5 : Réinitialisation si la phase est reading ou drawing
                 if (room.phase === 'reading' || room.phase === 'drawing') {
                     room.phase = 'drawing';
                     room.currentCard = null; // On annule la carte en cours pour le nouveau lecteur
@@ -591,7 +591,7 @@ socket.on('toggle_role', (roomCode) => {
         // CORRECTION BUG 1 : Empêcher le double lancement si le timer existe déjà
         if (room.countdownTimer) return;
     
-        // 1. [ORIGINAL] Re-balayage pour s'assurer qu'un chef est bien désigné
+        // 1. Re-balayage pour s'assurer qu'un chef est bien désigné
         const currentReaderValid = room.players.find(p => p.id === room.currentReaderId && !p.isSpectator && !p.isDead);
         if (!currentReaderValid) {
             const firstActive = room.players.find(p => !p.isSpectator && !p.isDead);
@@ -600,16 +600,16 @@ socket.on('toggle_role', (roomCode) => {
             }
         }
     
-        // 2. [ORIGINAL] Seul le chef peut lancer
+        // 2. Seul le chef peut lancer
         if (room.currentReaderId !== socket.id) return;
     
-        // 3. [ORIGINAL] Check du nombre minimum de joueurs
+        // 3. Check du nombre minimum de joueurs
         const activePlayers = room.players.filter(p => !p.isSpectator);
         if (activePlayers.length < 3) {
             return socket.emit('error_msg', "Il faut au moins 3 joueurs actifs pour démarrer !");
         }
     
-        // 4. [NOUVEAU] Lancement du compte à rebours avec stockage du Timer
+        // 4. Lancement du compte à rebours avec stockage du Timer
         io.to(roomCode).emit('game_countdown', { seconds: 5 });
     
         // On stocke le timer dans l'objet room pour pouvoir l'annuler si besoin
@@ -625,8 +625,8 @@ socket.on('toggle_role', (roomCode) => {
         }, 5000);
     });
 
-    socket.on('replay_game', (data) => {
-        const { roomCode } = data; // BUG 3 FIX : On n'accepte plus le deck venant du client
+socket.on('replay_game', (data) => {
+        const { roomCode } = data; // CORRECTION BUG 3 : On n'accepte plus le deck venant du client
         const room = rooms[roomCode];
         if (!room) return;
         
@@ -637,7 +637,7 @@ socket.on('toggle_role', (roomCode) => {
         if (room.phase !== 'lobby') {
             room.phase = 'lobby';
 
-            // BUG 3 FIX : On conserve le deck existant côté serveur (ne jamais le remplacer par le client)
+            // CORRECTION BUG 3 : On conserve le deck existant côté serveur 
             // On construit la liste des cartes à exclure : cimetière + cartes gagnées par les joueurs
             const excludedTexts = new Set([
                 ...room.cemetery.map(c => c.text),
@@ -647,7 +647,7 @@ socket.on('toggle_role', (roomCode) => {
             // On filtre le deck courant pour ne garder que les cartes non brûlées / non gagnées
             room.deck = room.deck.filter(c => !excludedTexts.has(c.text));
 
-            // BUG 3 FIX : Vérification sécurité — si le deck est trop petit, on l'alerte
+            // CORRECTION BUG 3 : Vérification sécurité — si le deck est trop petit, on l'alerte
             if (room.deck.length < room.scoreToWin) {
                 socket.emit('error_msg', `⚠️ Plus assez de cartes (${room.deck.length} restantes) pour finir une partie. Veuillez relancer avec un nouveau paquet.`);
                 // On continue quand même pour permettre une courte partie
