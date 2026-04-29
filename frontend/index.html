@@ -120,18 +120,17 @@
     </div>
 
     <div id="game-wrapper" class="hidden">
-        <div id="game-wrapper" class="hidden">
-            <div class="game-header">
-                <div id="room-badge">Room: 0000</div>
-                <button id="btn-back-menu" onclick="backToMenu()">🏠 Retour au menu</button>
-                <button id="btn-volume-toggle" onclick="openVolumeMenu()" title="Paramètres Audio">🔊 Audio</button>
-                
-                <button id="mobile-burger-btn" onclick="toggleMobileMenu()">☰</button>
-                <div id="mobile-menu-dropdown" class="hidden">
-                    <button onclick="openVolumeMenu(); toggleMobileMenu();">🔊 Paramètres Audio</button>
-                    <button onclick="executeBackToMenu(); toggleMobileMenu();" style="color: #d42b2b;">🚪 Quitter la partie</button>
-                </div>
+        <div class="game-header">
+            <div id="room-badge">Room: 0000</div>
+            <button id="btn-back-menu" onclick="backToMenu()">🏠 Retour au menu</button>
+            <button id="btn-volume-toggle" onclick="openVolumeMenu()" title="Paramètres Audio">🔊 Audio</button>
+            
+            <button id="mobile-burger-btn" onclick="toggleMobileMenu()">☰</button>
+            <div id="mobile-menu-dropdown" class="hidden">
+                <button onclick="openVolumeMenu(); toggleMobileMenu();">🔊 Paramètres Audio</button>
+                <button onclick="executeBackToMenu(); toggleMobileMenu();" style="color: #d42b2b;">🚪 Quitter la partie</button>
             </div>
+        </div>
         <div id="cinematic-backdrop"></div>
 
         <div id="game-layout">
