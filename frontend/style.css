@@ -19,10 +19,10 @@
    }
    
       .player, .avatar, #deck, .selectable-card, button, .avatar-option {
-       user-select: none; /* Empêche la sélection au double-clic */
-       -webkit-user-select: none; /* Pour Safari */
-       outline: none; /* Désactive le contour de focus */
-       -webkit-tap-highlight-color: transparent; /* Désactive le flash bleu sur mobile */
+       user-select: none; 
+       -webkit-user-select: none; 
+       outline: none; 
+       -webkit-tap-highlight-color: transparent;
       }
       
       body, html {
@@ -35,38 +35,36 @@
           background-size: 25px 25px;
       }
 
-      /* =========================================================
+/* =========================================================
    SCROLLBAR PERSONNALISÉE (Globale)
    ========================================================= */
 
-/* Pour Firefox */
 * {
     scrollbar-width: thin;
     scrollbar-color: #d42b2b #0f1a26;
 }
 
-/* Pour Chrome, Edge, Safari, Opera */
 ::-webkit-scrollbar {
-    width: 8px;  /* Largeur de la barre verticale */
-    height: 8px; /* Hauteur de la barre horizontale */
+    width: 8px;
+    height: 8px;
 }
 
-/* La piste de la barre (le fond) */
+
 ::-webkit-scrollbar-track {
     background: #0f1a26; 
     border-radius: 4px;
 }
 
-/* La barre en elle-même (le curseur rouge) */
+
 ::-webkit-scrollbar-thumb {
     background: #d42b2b;
     border-radius: 4px;
-    border: 1px solid #0f1a26; /* Ajoute un petit espace respirant autour */
+    border: 1px solid #0f1a26;
 }
 
-/* Quand on survole la barre avec la souris */
+
 ::-webkit-scrollbar-thumb:hover {
-    background: #e74c3c; /* Un rouge un peu plus vif au survol */
+    background: #e74c3c; 
 }
       
       /* =========================================================
@@ -147,7 +145,6 @@
          100% { transform: translate3d(0, 0, 0) rotate(-6deg); }
      }
       
-      /* -- HERO BANNER (Nouveau) -- */
       .hero-container {
           display: flex; flex-direction: column; align-items: center; text-align: center;
          max-width: 800px; padding: 40px; z-index: 10;
@@ -183,7 +180,6 @@
           background: #1a2a3a;
       }
    
-   /* Empêche le surlignage/sélection dans tout le hero banner */
    .hero-container,
    .hero-container .hero-floating-cards,
    .hero-container .floating-card,
@@ -212,7 +208,6 @@
     cursor: pointer;
     padding: 0;
     box-shadow: 0 8px 20px rgba(0,0,0,0.45);
-    /* NOUVEAU : On s'assure que le bouton reste au-dessus du fond sombre */
     position: relative; 
     z-index: 5001;      
 }
@@ -225,26 +220,24 @@
 }
 
 #card-skin-menu {
-    /* NOUVEAU : Le menu devient une vraie fenêtre centrée */
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: min(900px, 90vw); /* Menu beaucoup plus grand */
+    width: min(900px, 90vw);
     max-height: 85vh;
     background: #131e2c;
     border: 2px solid #2e4060;
     border-top: 4px solid #d42b2b;
     border-radius: 16px;
-    padding: 40px; /* Plus d'espace interne */
+    padding: 40px; 
     
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* S'adapte à l'écran */
-    gap: 30px; /* Plus d'écart entre les cartes */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px; 
     overflow-y: auto;
     z-index: 5000;
     
-    /* L'astuce magique : crée une ombre gigantesque qui assombrit tout le jeu derrière */
     box-shadow: 0 0 0 100vmax rgba(5, 10, 18, 0.88), 0 30px 80px rgba(0,0,0,0.8);
 }
 
@@ -254,18 +247,18 @@
     background: #1a2a3a;
     color: #e8ddd0;
     font-family: inherit;
-    padding: 20px; /* Boutons plus grands */
+    padding: 20px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px; /* Plus d'espace entre la carte et le texte */
+    gap: 15px; 
     transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .card-skin-option:hover {
     border-color: #d42b2b;
-    transform: translateY(-5px) scale(1.03); /* Bel effet de zoom au survol */
+    transform: translateY(-5px) scale(1.03);
 }
 
 .card-skin-option.selected {
@@ -275,7 +268,7 @@
 }
 
 .card-skin-option img {
-    width: 130px; /* Cartes énormes (presque 3x plus grandes) ! */
+    width: 130px;
     height: 182px;
     border-radius: 8px;
     object-fit: fill;
@@ -283,7 +276,7 @@
 }
 
 .card-skin-option span {
-    font-size: 1.5rem; /* Texte plus lisible */
+    font-size: 1.5rem;
     font-weight: bold;
 }
       .card-1 { transform: rotate(-20deg) translateX(-90px); animation: float1 4s ease-in-out infinite; z-index: 1; }
@@ -329,7 +322,6 @@
                0 0 2px rgba(212,43,43,0.3);
        }
    }
-      /* -------------------------- */
       
      .lobby-card {
          padding: 40px 50px; display: flex; flex-direction: column; gap: 18px; width: 560px;
@@ -406,8 +398,7 @@
          display: flex;
          align-items: flex-end;
      }
-     /* Input number — supprime les flèches natives, style custom */
-     #input-points {
+    #input-points {
          width: 100%;
          text-align: center;
          -moz-appearance: textfield;
@@ -418,8 +409,7 @@
          -webkit-appearance: none;
          margin: 0;
      }
-   
-     /* Wrapper custom pour le stepper points */
+     
      .points-stepper {
          display: flex; align-items: stretch; gap: 0;
          border: 2px solid #2e4060; border-radius: 6px; overflow: hidden;
@@ -458,7 +448,7 @@
         display: none;
     }
 
-/* =========================================================
+    /* =========================================================
        RESPONSIVE - Page Rejoindre/Créer (Entre 980px et 761px)
        On garde les deux panneaux côte à côte et compressés
        ========================================================= */
@@ -467,7 +457,6 @@
             width: 96vw;
         }
         .lobby-panel {
-            /* Partage strict 50/50 */
             flex: 1 1 0; 
             min-width: 0; 
             padding: 24px 20px;
@@ -496,7 +485,7 @@
         }
     }
 
-/* =========================================================
+    /* =========================================================
        RESPONSIVE - Page Rejoindre/Créer (Max-width: 760px)
        Passage en colonne (l'un sur l'autre)
        ========================================================= */
@@ -504,7 +493,7 @@
         
         /* 1. On repasse en mode "block" classique SANS FORCER par-dessus la classe .hidden */
         #step-choose {
-             display: block; /* 🔥 LA CORRECTION EST LÀ : on a retiré le !important */
+             display: block;
              height: 100%; 
              padding: 30px 4vw; 
              overflow-y: auto; 
@@ -559,7 +548,7 @@
         }
     }
 
-/* =========================================================
+    /* =========================================================
        RESPONSIVE MOBILE - JEU PRINCIPAL (Max-width: 760px)
        ========================================================= */
        @media (max-width: 760px), (max-height: 650px) {
@@ -567,7 +556,7 @@
         #game-layout {
             flex-direction: column;
             padding: 0; 
-            padding-top: 60px; /* Espace pour le header */
+            padding-top: 60px;
             justify-content: flex-start;
         }
 
@@ -584,21 +573,20 @@
         #deck { width: 60px; height: 84px; border-radius: 6px; }
         .pointer::after { font-size: 2.5rem; left: 35px; top: -15px; }
 
-/* 🔥 LE PANNEAU DROIT (UI du bas) 🔥 */
+
 #right-pane {
     flex: 1; 
     width: 100% !important;
-    max-width: 100vw !important; /* Sécurité anti-débordement */
+    max-width: 100vw !important; 
     
-    /* ON REMET L'ESPACE ICI (15px à gauche et à droite) */
     padding: 20px 15px 80px 15px !important; 
     
     border-left: none;
     border-top: 2px solid rgba(46,64,96,0.4);
     overflow-y: auto !important; 
-    overflow-x: hidden !important; /* Interdiction stricte de scroller sur le côté */
+    overflow-x: hidden !important;
     justify-content: flex-start !important; 
-    align-items: center !important; /* Centre proprement tout le contenu */
+    align-items: center !important;
 }
 
 #right-pane::before {
@@ -606,7 +594,7 @@
     border-radius: 16px 16px 0 0; 
 }
 
-/* Disparition des éléments inutiles sur mobile */
+
 #display-room-name, 
 #room-badge,
 #btn-volume-toggle,
@@ -618,17 +606,16 @@
 .role-toggle-container { 
     margin-bottom: 15px; 
     width: 100% !important; 
-    margin: 0 !important; /* Plus de marges piégées */
+    margin: 0 !important;
 }
 .btn-role-toggle { 
     padding: 10px 14px; 
     font-size: 1rem; 
     width: 100%; 
     justify-content: center; 
-    box-sizing: border-box !important; /* Les bordures restent dedans ! */
+    box-sizing: border-box !important;
 }
 
-/* Sécurité pour le conteneur intermédiaire */
 #waiting-area {
     width: 100% !important;
     max-width: 100% !important;
@@ -714,7 +701,7 @@
     text-align: left; border-radius: 4px; cursor: pointer;
 }
 
-/* 🔥 BOUTON CIMETIÈRE FLOTTANT EN BAS À DROITE */
+/* BOUTON CIMETIÈRE FLOTTANT EN BAS À DROITE */
 #cemetery-btn { 
     top: auto !important;
     bottom: 20px !important; 
@@ -819,14 +806,13 @@
       .avatar { width: 80px; height: 80px; border-radius: 50%; border: 4px solid #2e4060; display: flex; justify-content: center; align-items: center; padding-top: 10px; font-size: 3rem; background-color: #1a2a3a; transition: all 0.5s ease; position: relative; z-index: 20; box-shadow: 0 4px 14px rgba(0,0,0,0.5); }   
       .selected-target { box-shadow: 0 0 0 5px #d42b2b, 0 0 25px rgba(212,43,43,0.7) !important; transform: scale(1.15); border-color: #d42b2b !important; }
       .avatar.validated { border-color: #27ae60 !important; box-shadow: 0 0 20px rgba(39,174,96,0.8) !important; transform: scale(1.05); }
-      /* Quand un joueur est À LA FOIS notre cible ET a validé son vote */
-       .avatar.selected-target.validated {
-       border-color: #27AE60 !important; /* 1. Le bord de l'avatar devient vert (il a voté) */
+      .avatar.selected-target.validated {
+       border-color: #27AE60 !important;
        box-shadow: 
-           0 0 0 6px #D9383A,                /* 2. L'anneau extérieur reste rouge (c'est ta cible) */
-           0 0 25px rgba(217, 56, 58, 0.7)   /* 3. Le halo rouge autour */
+           0 0 0 6px #D9383A,           
+           0 0 25px rgba(217, 56, 58, 0.7)
            !important; 
-       transform: scale(1.15); /* On le maintient zoomé pour bien le repérer */
+       transform: scale(1.15); 
        }
       
       .humiliated .avatar { animation: shake 0.4s ease-in-out infinite !important; }
@@ -837,7 +823,7 @@
       
       .mutilated .avatar { border-color: #8b0000 !important; box-shadow: inset 0 0 15px rgba(139,0,0,0.8), 0 0 10px rgba(139,0,0,0.8) !important; background-color: #2a1010 !important; }
       .mutilated::after { content: '🩸'; position: absolute; top: -5px; left: -5px; font-size: 2rem; z-index: 50; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
-      /* ====== APRÈS ====== */
+
       .executed .avatar { filter: grayscale(100%); opacity: 0.4; border-color: #222 !important; background-color: #111 !important; }
       .executed .avatar::after { content: '❌'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 4rem; z-index: 50; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5)); }
       .executed { pointer-events: none; }
@@ -1066,7 +1052,7 @@
          ========================================================= */
          #spectators-container {
             position: absolute; 
-            top: 80px; /* Au lieu de 20px, on le descend sous le bouton volume */
+            top: 80px; 
             left: 28px; 
             display: flex; 
             flex-direction: column; 
@@ -1082,10 +1068,6 @@
         }
         .confirm-box { width: min(400px, 90vw); text-align: center; }
 
-
-        /* AVANT (ajouter à la fin) */
-
-/* APRÈS */
 .room-neon-title {
     font-size: 3.5rem;
     color: #d42b2b;
@@ -1173,7 +1155,7 @@
    #btn-volume-toggle {
     position: absolute; 
     top: 28px; 
-    left: 28px; /* Placé à gauche symétriquement au cimetière */
+    left: 28px;
     background: #1a2a3a; 
     color: #e8ddd0;
     border: 2px solid #2e4060; 
@@ -1202,7 +1184,6 @@
 
 .volume-sliders { display: flex; flex-direction: column; gap: 20px; }
 
-/* Personnalisation des sliders (input range) */
 input[type=range] {
     -webkit-appearance: none;
     width: 100%;
@@ -1231,7 +1212,7 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 input[type=range]:focus { outline: none; }
 
-/* Pour Firefox */
+
 input[type=range]::-moz-range-thumb {
     height: 20px;
     width: 20px;
@@ -1256,29 +1237,24 @@ input[type=range]::-moz-range-track {
    ========================================================= */
 
    @media (max-width: 560px) {
-    /* On réduit l'espace global autour du conteneur */
     .hero-container {
         padding: 20px;
     }
     
-    /* On donne un peu moins de hauteur à l'animation des cartes */
     .hero-floating-cards {
         height: 130px;
         margin-bottom: 5px;
     }
     
-    /* On rétrécit le titre principal pour qu'il prenne moins de place en hauteur */
     .hero-title {
         font-size: 4.2rem;
     }
     
-    /* LA BOÎTE D'INFO : On réduit les marges internes et l'écart avec le bouton */
     .hero-desc-box {
         padding: 15px 20px;
         margin-bottom: 20px;
     }
     
-    /* On ajuste les textes pour éviter qu'ils ne fassent trop de lignes */
     .hero-desc-box p {
         font-size: 1.4rem;
     }
@@ -1288,7 +1264,6 @@ input[type=range]::-moz-range-track {
         line-height: 1.3;
     }
     
-    /* On adapte le bouton à la nouvelle taille de l'écran */
     .btn-hero {
         font-size: 1.5rem;
         padding: 15px 30px;
