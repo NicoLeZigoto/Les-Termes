@@ -1076,6 +1076,7 @@ input[type=range]::-moz-range-track {
     .avatar-picker-shell {
         display: flex;
         align-items: center;
+        justify-content: center;
         width: 100%;
         gap: 10px;
     }
@@ -1100,12 +1101,12 @@ input[type=range]::-moz-range-track {
     .avatar-option {
         width: 100%;
         height: auto;
-        aspect-ratio: 1; /* Reste un cercle parfait */
+        aspect-ratio: 1; 
         font-size: 1.8rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0; /* Retire le décalage pour bien centrer */
+        padding: 0;
     }
 /* 6. On garde le bouton flèche intact */
     .avatar-nav-btn {
@@ -1116,3 +1117,52 @@ input[type=range]::-moz-range-track {
     }
 }
 
+
+/* 3. Le conteneur se centre parfaitement */
+.avatar-picker-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 10px;
+}
+
+/* 4. Les boutons d'avatars gardent un aspect régulier */
+.avatar-option {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1; 
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+/* 5. Le bouton flèche réduit légèrement */
+.avatar-nav-btn {
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+/* === NOUVELLES MEDIA QUERIES STRICTES POUR LA GRILLE === */
+
+/* En dessous de 480px : Le JS chargera 8 éléments, le CSS fait 4 colonnes */
+@media (max-width: 480px) {
+.avatar-picker {
+    grid-template-columns: repeat(4, 50px);
+    grid-template-rows: auto;
+}
+}
+
+/* En dessous de 380px : Le JS chargera 6 éléments, le CSS fait 3 colonnes */
+@media (max-width: 380px) {
+.avatar-picker {
+    grid-template-columns: repeat(3, 45px);
+}
+.avatar-option {
+    font-size: 1.5rem; /* On réduit un poil l'emoji */
+}
+}

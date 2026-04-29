@@ -108,7 +108,7 @@ const IDENTITY_SUBTITLES = [
     "Balance ton blaze (et ton 06 si tu veux).", "PTDR T KI ?"
 ];
 
-const AVATAR_PAGE_SIZE = 10;
+let AVATAR_PAGE_SIZE = 10;
 const AVATAR_CHOICES = [
     // Visages et Attitudes
     "😂", "😃", "😅", "😉", "😋", "😎", "😍", "😘", "🙂", "🤔", "😐", "😶", "🙄", "😏", "😣", "😥", "😮", "🤐", "🤤", "😒", "😓", "😔", "😕", "🙃", "🙁", "😞", "😤", "😩", "😬", "😱", "😳", "😵", "😠", "🤬", "😇", "🤠", "🤡", "🤫", "🤓", "😈", "💀", "👻", "👽", "🤖", "💩",
@@ -1962,6 +1962,24 @@ function initLobbyUI() {
         ).join('');
     };
 
+    // === NOUVEAU : Ajustement de la grille d'avatars selon l'écran ===
+    let lastSize = AVATAR_PAGE_SIZE;
+    const adjustAvatarGrid = () => {
+        if (window.innerWidth <= 380) AVATAR_PAGE_SIZE = 6;      // 3 colonnes x 2 lignes
+        else if (window.innerWidth <= 480) AVATAR_PAGE_SIZE = 8; // 4 colonnes x 2 lignes
+        else AVATAR_PAGE_SIZE = 10;                              // 5 colonnes x 2 lignes
+        
+        if (lastSize !== AVATAR_PAGE_SIZE) {
+            avatarPageIndex = 0; // Retour à la page 1 pour éviter les bugs
+            renderAvatarPage();
+            lastSize = AVATAR_PAGE_SIZE;
+        }
+    };
+
+    window.addEventListener('resize', adjustAvatarGrid);
+    adjustAvatarGrid(); // Appel initial au chargement
+    // ================================================================
+    
     if (avatarPicker) {
         renderAvatarPage();
         avatarPicker.addEventListener('click', e => {
