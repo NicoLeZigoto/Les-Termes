@@ -108,7 +108,7 @@ const IDENTITY_SUBTITLES = [
     "Balance ton blaze (et ton 06 si tu veux).", "PTDR T KI ?"
 ];
 
-const AVATAR_PAGE_SIZE = 10;
+let AVATAR_PAGE_SIZE = window.innerWidth <= 600 ? 8 : 10;
 const AVATAR_CHOICES = [
     // Visages et Attitudes
     "😂", "😃", "😅", "😉", "😋", "😎", "😍", "😘", "🙂", "🤔", "😐", "😶", "🙄", "😏", "😣", "😥", "😮", "🤐", "🤤", "😒", "😓", "😔", "😕", "🙃", "🙁", "😞", "😤", "😩", "😬", "😱", "😳", "😵", "😠", "🤬", "😇", "🤠", "🤡", "🤫", "🤓", "😈", "💀", "👻", "👽", "🤖", "💩",

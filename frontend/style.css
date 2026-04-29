@@ -337,7 +337,11 @@
          border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(240,236,228,0.04);
          position: relative; z-index: 10;
       }
-     .lobby-card.card { width: 450px; max-width: 450px; }
+      .lobby-card.card {
+        width: 92vw !important;
+        max-width: 100% !important;
+        padding: 25px 20px;
+    }
       .lobby-card h1 { text-align: center; margin: 0 0 4px; font-size: 3.2rem; color: #e8ddd0; }
       .subtitle { text-align: center; font-size: 1.4rem; color: #7a8fa8; margin: 0 0 10px; }
       
@@ -352,13 +356,15 @@
       .form-group input::placeholder { color: #3a5068; }
       
      .avatar-picker-label { font-size: 1.15rem; font-weight: bold; margin-bottom: 6px; color: #a0b4c8; }
-     .avatar-picker-shell { display: flex; align-items: center; gap: 14px; }
-     .avatar-picker {
-         display: grid;
-         grid-template-columns: repeat(5, 56px);
-         grid-template-rows: repeat(2, 56px);
-         gap: 10px;
-     }
+     .avatar-picker-shell {
+        justify-content: center;
+        gap: 10px;
+    }
+    .avatar-picker {
+        grid-template-columns: repeat(4, 50px);
+        grid-template-rows: repeat(2, 50px);
+        gap: 8px;
+    }
       .avatar-option {
           font-size: 2.2rem; width: 56px; height: 56px; display: flex; align-items: center; padding-top: 6px;
           justify-content: center; border: 3px solid transparent; border-radius: 50%;
@@ -367,8 +373,8 @@
       .avatar-option:hover { transform: scale(1.12); border-color: #2e4060; }
       .avatar-option.selected { border-color: #d42b2b; background: #1e2d3d; transform: scale(1.12); }
      .avatar-nav-btn {
-         width: 56px;
-         height: 56px;
+         width: 50px;
+         height: 50px;
          border: 2px solid #2e4060;
          border-radius: 50%;
          background: #253447;
@@ -1119,8 +1125,9 @@ input[type=range]::-moz-range-track {
     }
     
     #card-skin-menu {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        padding: 20px;
+        grid-template-columns: 1fr;
+        padding: 24px;
+        gap: 15px;
     }
     
     .card-skin-option img {
