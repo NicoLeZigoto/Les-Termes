@@ -496,31 +496,33 @@
        Passage en colonne (l'un sur l'autre)
        ========================================================= */
        @media (max-width: 760px), (max-height: 650px) {
+        
+        /* 1. On repasse en mode "block" classique pour annuler le rétrécissement de Flexbox */
         #step-choose {
+             display: block !important; 
              height: 100%; 
-             align-items: flex-start;
              padding: 30px 4vw; 
              overflow-y: auto; 
         }
 
+        /* 2. Ce conteneur prendra maintenant 100% de la largeur disponible */
         .lobby-wide-card {
+             display: flex;
              flex-direction: column;
              align-items: stretch;
              gap: 24px;
-             width: 100%; 
-             max-width: 100%; 
+             width: 100% !important; 
+             max-width: none !important; 
              margin: 0 auto;
-             height: auto;
-             max-height: none;
-             overflow: visible;
-             padding: 0;
         }
 
-        .lobby-panel {
+        /* 3. On cible ULTRA précisément les panels pour tuer la limite de la classe .card */
+        .lobby-wide-card .lobby-panel.card {
              padding: 30px 25px;
              flex: none; 
-             width: 100%; 
-             max-width: 100%; /* 🔥 LA CORRECTION EST LÀ : on tue la limite des 400px de .card */
+             width: 100% !important; 
+             max-width: none !important; /* MORT AU MAX-WIDTH 400px ! */
+             box-sizing: border-box;
              box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
@@ -548,6 +550,7 @@
              font-size: 2.4rem !important;
              letter-spacing: 0.3em !important;
              width: 100%;
+             box-sizing: border-box;
         }
     }
       
