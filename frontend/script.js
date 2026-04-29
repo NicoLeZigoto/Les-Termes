@@ -308,15 +308,6 @@ function enterGame(phase = 'lobby') {
     
     initRoomBadgeShare();
 
-    // NOUVEAU : Observer le redimensionnement de la table pour le responsive
-    const tableEl = document.getElementById('table');
-    if (tableEl && !window._tableObserver) {
-        window._tableObserver = new ResizeObserver(() => {
-            if (gamePhase !== 'lobby') renderPlayers();
-        });
-        window._tableObserver.observe(tableEl);
-    }
-
     setTimeout(() => {
         audioManager.stopMusic();
         audioManager.playMusic('game', { volume: 0.2 });
