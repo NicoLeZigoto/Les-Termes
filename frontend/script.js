@@ -133,6 +133,7 @@ const CARD_SKINS = [
     { id: 'skin-celeste', name: 'Celeste', image: 'cartes/dos-carte-celeste.png' },
     { id: 'skin-cult', name: 'Cultiste', image: 'cartes/dos-carte-cult.png' },
     { id: 'skin-roseau', name: 'Roseau', image: 'cartes/dos-carte-roseau.png' },
+    { id: 'skin-rowlet', name: 'Mokuroh', image: 'cartes/dos-carte-rowlet.png' },
     { id: 'skin-mario', name: 'Mario 2 le 2', image: 'cartes/dos-carte-mario.png' },
 
 ];
@@ -1979,7 +1980,7 @@ function initLobbyUI() {
     window.addEventListener('resize', adjustAvatarGrid);
     adjustAvatarGrid(); // Appel initial au chargement
     // ================================================================
-    
+
     if (avatarPicker) {
         renderAvatarPage();
         avatarPicker.addEventListener('click', e => {
@@ -2264,3 +2265,21 @@ async function playPokeAnimation(senderId, targetId) {
     await sleep(200);
     finger.remove();
 }
+
+// =========================================================
+// MENU MOBILE (Burger)
+// =========================================================
+
+function toggleMobileMenu() {
+    audioManager.playSound('ui-click');
+    document.getElementById('mobile-menu-dropdown').classList.toggle('hidden');
+}
+
+// Ferme le menu si on clique n'importe où ailleurs sur l'écran
+document.addEventListener('click', (e) => {
+    const btn = document.getElementById('mobile-burger-btn');
+    const dropdown = document.getElementById('mobile-menu-dropdown');
+    if (btn && dropdown && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+    }
+});
