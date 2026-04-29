@@ -1054,4 +1054,50 @@ input[type=range]::-moz-range-track {
         font-size: 1.5rem;
         padding: 15px 30px;
     }
+
+    /* === PAGE IDENTITÉ (Pseudo / Avatar) === */
+    
+    /* 1. La carte devient flexible et on réduit ses bords intérieurs */
+    .lobby-card.card {
+        width: 92vw; 
+        max-width: 100%;
+        padding: 30px 20px; 
+    }
+
+    /* 2. On réduit un peu la taille des textes pour éviter les retours à la ligne moches */
+    .lobby-card h1 {
+        font-size: 2.6rem;
+    }
+    .subtitle {
+        font-size: 1.2rem;
+    }
+
+    /* 3. On rend la grille d'avatars "fluide" */
+    .avatar-picker-shell {
+        gap: 10px; /* On réduit l'écart avec la flèche */
+    }
+    
+    .avatar-picker {
+        /* Les 5 colonnes se partagent équitablement la largeur disponible */
+        grid-template-columns: repeat(5, 1fr); 
+        gap: 6px; /* On réduit l'espace mort entre les émojis */
+    }
+    
+    /* 4. Les boutons d'avatars s'adaptent à la grille */
+    .avatar-option {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1; /* Permet de garder un cercle parfait peu importe la largeur */
+        font-size: 1.6rem; /* Emoji un peu plus petit */
+        padding-top: 2px; /* Ajustement du centrage vertical */
+    }
+
+    /* 5. On réduit un peu le bouton "flèche" pour qu'il ne mange pas tout l'espace */
+    .avatar-nav-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+        flex-shrink: 0; /* Empêche le bouton de se faire écraser par la grille */
+    }
 }
+
