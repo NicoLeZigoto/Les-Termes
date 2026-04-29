@@ -499,7 +499,6 @@
         #step-choose {
              height: 100%; 
              align-items: flex-start;
-             /* On met un padding en vw (pourcentage d'écran) pour que la marge soit fine mais toujours présente */
              padding: 30px 4vw; 
              overflow-y: auto; 
         }
@@ -509,7 +508,7 @@
              align-items: stretch;
              gap: 24px;
              width: 100%; 
-             max-width: 100%; /* LA CORRECTION EST ICI : On libère la largeur totale ! */
+             max-width: 100%; 
              margin: 0 auto;
              height: auto;
              max-height: none;
@@ -521,6 +520,7 @@
              padding: 30px 25px;
              flex: none; 
              width: 100%; 
+             max-width: 100%; /* 🔥 LA CORRECTION EST LÀ : on tue la limite des 400px de .card */
              box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
