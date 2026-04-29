@@ -497,27 +497,30 @@
        ========================================================= */
        @media (max-width: 760px), (max-height: 650px) {
         #step-choose {
+             height: 100%; /* INDISPENSABLE : donne une limite pour activer le scroll */
              align-items: flex-start;
-             padding: 10px; /* Petit padding global pour ne pas coller aux bords de l'écran */
-             overflow-y: auto;
+             padding: 30px 15px; /* Un beau padding pour respirer en haut et sur les côtés */
+             overflow-y: auto; /* Le scroll revient ! */
         }
 
         .lobby-wide-card {
              flex-direction: column;
-             gap: 20px; /* Plus d'espace entre les deux panneaux pour la lisibilité */
-             width: 100%; /* Prend toute la largeur du parent */
-             max-width: 100%; /* On s'assure qu'aucune limite ne bloque */
+             align-items: stretch; /* LA CORRECTION MAGIQUE : force l'étirement sur toute la largeur */
+             gap: 24px; /* Un peu plus d'espace entre les deux blocs */
+             width: 100%; 
+             max-width: 500px; /* On bloque à 500px pour garder des belles proportions sur tablette */
+             margin: 0 auto; /* Centre la colonne parfaitement au milieu */
              height: auto;
-             max-height: none; /* On laisse défiler naturellement */
+             max-height: none;
              overflow: visible;
-             padding: 10px;
+             padding: 0;
         }
 
         .lobby-panel {
              padding: 30px 25px;
              flex: none; 
-             width: 100%; /* Chaque panneau prend 100% de la largeur du conteneur */
-             box-shadow: 0 10px 30px rgba(0,0,0,0.5); /* Ombre portée pour décoller du fond */
+             width: 100%; 
+             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .lobby-divider {
@@ -525,17 +528,16 @@
              padding: 0;
              gap: 15px;
              width: 100%;
-             color: rgba(240,236,228,0.2); /* On estompe le "OU" pour ne pas surcharger */
+             color: rgba(240,236,228,0.2);
         }
 
         .lobby-divider::before,
         .lobby-divider::after {
-             width: auto;
-             height: 1px;
+             width: 100%; /* Les traits prennent tout l'espace restant */
+             height: 2px;
              background: rgba(46,64,96,0.4);
         }
 
-        /* On s'assure que les options de création respirent aussi */
         .create-options-grid {
              grid-template-columns: 1fr;
              gap: 15px;
