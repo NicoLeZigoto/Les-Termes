@@ -1074,8 +1074,10 @@ input[type=range]::-moz-range-track {
 
     /* 3. Le conteneur global se centre */
     .avatar-picker-shell {
-        justify-content: center; /* Centre le bloc entier (emojis + flèche) */
-        gap: 12px;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 10px;
     }
     
     .avatar-picker {
@@ -1086,26 +1088,31 @@ input[type=range]::-moz-range-track {
     
     /* 4. On remplace la grille par un flexbox qui passe à la ligne automatiquement */
     .avatar-picker {
-        display: flex;
-        flex-wrap: wrap; /* C'est ça qui crée la magie du retour à la ligne (4, puis 3, puis 2...) */
-        justify-content: center;
-        gap: 8px; /* On garde un petit écart propre */
-    }
-
-    /* 4bis. Les emojis retrouvent une taille fixe (légèrement ajustée pour mobile) */
-    .avatar-option {
-        width: 50px; 
-        height: 50px;
-        font-size: 2rem;
-        padding-top: 4px; /* Ajustement du centrage vertical de l'émoji */
+        display: grid;
+        /* Crée automatiquement des colonnes d'au moins 45px. 
+           Si la place manque, ça passe de 5 à 4 colonnes strictement ! */
+        grid-template-columns: repeat(auto-fit, minmax(45px, 1fr));
+        gap: 8px;
+        flex: 1; /* La grille prend toute la place à gauche de la flèche */
     }
 
     /* 5. On réduit un peu le bouton "flèche" pour qu'il ne mange pas tout l'espace */
+    .avatar-option {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1; /* Reste un cercle parfait */
+        font-size: 1.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0; /* Retire le décalage pour bien centrer */
+    }
+/* 6. On garde le bouton flèche intact */
     .avatar-nav-btn {
         width: 45px;
         height: 45px;
         font-size: 1.2rem;
-        flex-shrink: 0; /* Empêche le bouton de se faire écraser par la grille */
+        flex-shrink: 0;
     }
 }
 
