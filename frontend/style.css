@@ -1072,9 +1072,10 @@ input[type=range]::-moz-range-track {
         font-size: 1.2rem;
     }
 
-    /* 3. On rend la grille d'avatars "fluide" */
+    /* 3. Le conteneur global se centre */
     .avatar-picker-shell {
-        gap: 10px; /* On réduit l'écart avec la flèche */
+        justify-content: center; /* Centre le bloc entier (emojis + flèche) */
+        gap: 12px;
     }
     
     .avatar-picker {
@@ -1083,13 +1084,20 @@ input[type=range]::-moz-range-track {
         gap: 6px; /* On réduit l'espace mort entre les émojis */
     }
     
-    /* 4. Les boutons d'avatars s'adaptent à la grille */
+    /* 4. On remplace la grille par un flexbox qui passe à la ligne automatiquement */
+    .avatar-picker {
+        display: flex;
+        flex-wrap: wrap; /* C'est ça qui crée la magie du retour à la ligne (4, puis 3, puis 2...) */
+        justify-content: center;
+        gap: 8px; /* On garde un petit écart propre */
+    }
+
+    /* 4bis. Les emojis retrouvent une taille fixe (légèrement ajustée pour mobile) */
     .avatar-option {
-        width: 100%;
-        height: auto;
-        aspect-ratio: 1; /* Permet de garder un cercle parfait peu importe la largeur */
-        font-size: 1.6rem; /* Emoji un peu plus petit */
-        padding-top: 2px; /* Ajustement du centrage vertical */
+        width: 50px; 
+        height: 50px;
+        font-size: 2rem;
+        padding-top: 4px; /* Ajustement du centrage vertical de l'émoji */
     }
 
     /* 5. On réduit un peu le bouton "flèche" pour qu'il ne mange pas tout l'espace */
