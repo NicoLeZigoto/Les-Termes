@@ -1009,3 +1009,126 @@ input[type=range]::-moz-range-track {
     border: 1px solid #2e4060;
     border-radius: 3px;
 }
+/* =========================================================
+   RESPONSIVE DESIGN
+   ========================================================= */
+
+@media (max-width: 1024px) {
+    #game-layout {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+        padding: 10px;
+    }
+
+    #left-pane {
+        width: 100%;
+        height: 50vh;
+        min-height: 400px;
+        flex: none;
+    }
+
+    #right-pane {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        min-height: 50vh;
+        border-left: none;
+        border-top: 4px solid rgba(46,64,96,0.4);
+        padding: 20px;
+        flex: none;
+    }
+
+    #table {
+        width: 80%;
+        max-width: 350px;
+    }
+
+    .hero-title {
+        font-size: 4rem;
+    }
+
+    .hero-desc-box {
+        padding: 15px 20px;
+    }
+
+    .hero-desc-box p {
+        font-size: 1.4rem;
+    }
+
+    .lobby-wide-card {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        overflow-y: auto;
+        padding: 20px;
+    }
+
+    .lobby-panel {
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .lobby-divider {
+        width: 80%;
+        height: 2px;
+        margin: 10px 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .hero-title {
+        font-size: 3rem;
+    }
+
+    #table {
+        width: 90%;
+    }
+
+    .avatar {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+
+    .player {
+        width: 70px;
+    }
+
+    .player-name {
+        font-size: 0.9rem;
+        padding: 2px 8px;
+    }
+
+    #deck {
+        width: 80px;
+        height: 112px;
+    }
+
+    .card-text {
+        font-size: 1.5rem;
+    }
+
+    #timer-display {
+        font-size: 4rem;
+    }
+
+    .placeholder-text {
+        font-size: 1.5rem;
+    }
+    
+    #card-skin-menu {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        padding: 20px;
+    }
+    
+    .card-skin-option img {
+        width: 90px;
+        height: 126px;
+    }
+    
+    .card-skin-option span {
+        font-size: 1.1rem;
+    }
+}
