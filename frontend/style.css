@@ -491,47 +491,60 @@
         }
     }
 
-    /* =========================================================
+/* =========================================================
        RESPONSIVE - Page Rejoindre/Créer (Max-width: 760px)
-       Passage en colonne (l'un sur l'autre) à 760px de large
+       Passage en colonne (l'un sur l'autre)
        ========================================================= */
-    @media (max-width: 760px), (max-height: 650px) {
+       @media (max-width: 760px), (max-height: 650px) {
         #step-choose {
              align-items: flex-start;
-             padding: 18px 0;
+             padding: 10px; /* Petit padding global pour ne pas coller aux bords de l'écran */
+             overflow-y: auto;
         }
+
         .lobby-wide-card {
              flex-direction: column;
-             gap: 14px;
-             width: 94vw;
-             max-height: calc(100vh - 36px);
-             overflow-y: auto;
-             padding-right: 4px;
+             gap: 20px; /* Plus d'espace entre les deux panneaux pour la lisibilité */
+             width: 100%; /* Prend toute la largeur du parent */
+             max-width: 100%; /* On s'assure qu'aucune limite ne bloque */
+             height: auto;
+             max-height: none; /* On laisse défiler naturellement */
+             overflow: visible;
+             padding: 10px;
         }
+
         .lobby-panel {
-             padding: 24px 22px;
-             /* On annule le partage 50/50 puisqu'ils sont l'un sur l'autre */
+             padding: 30px 25px;
              flex: none; 
-             width: 100%;
+             width: 100%; /* Chaque panneau prend 100% de la largeur du conteneur */
+             box-shadow: 0 10px 30px rgba(0,0,0,0.5); /* Ombre portée pour décoller du fond */
         }
+
         .lobby-divider {
              flex-direction: row;
              padding: 0;
-             gap: 12px;
+             gap: 15px;
              width: 100%;
+             color: rgba(240,236,228,0.2); /* On estompe le "OU" pour ne pas surcharger */
         }
+
         .lobby-divider::before,
         .lobby-divider::after {
              width: auto;
-             height: 2px;
+             height: 1px;
+             background: rgba(46,64,96,0.4);
         }
+
+        /* On s'assure que les options de création respirent aussi */
         .create-options-grid {
              grid-template-columns: 1fr;
-             gap: 10px;
+             gap: 15px;
         }
+
         .code-input {
-             font-size: 2.1rem !important;
-             letter-spacing: 0.35em !important;
+             font-size: 2.4rem !important;
+             letter-spacing: 0.3em !important;
+             width: 100%;
         }
     }
       
