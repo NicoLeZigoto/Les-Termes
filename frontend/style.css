@@ -241,6 +241,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* S'adapte à l'écran */
     gap: 30px; /* Plus d'écart entre les cartes */
+    /* Mobile : 1 colonne forcée via media query ci-dessous */
     overflow-y: auto;
     z-index: 5000;
     
@@ -337,7 +338,7 @@
          border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(240,236,228,0.04);
          position: relative; z-index: 10;
       }
-     .lobby-card.card { width: 450px; max-width: 450px; }
+     .lobby-card.card { width: 450px; max-width: min(450px, 92vw); }
       .lobby-card h1 { text-align: center; margin: 0 0 4px; font-size: 3.2rem; color: #e8ddd0; }
       .subtitle { text-align: center; font-size: 1.4rem; color: #7a8fa8; margin: 0 0 10px; }
       
@@ -453,6 +454,29 @@
           background: rgba(46,64,96,0.7); border-radius: 2px;
       }
    
+     @media (max-width: 600px) {
+         /* Skin menu : 1 seule colonne sur mobile */
+         #card-skin-menu {
+             grid-template-columns: 1fr;
+             padding: 24px 16px;
+             gap: 16px;
+         }
+
+         /* Carte identité : padding réduit pour tenir dans l'écran */
+         .lobby-card, .lobby-card.card {
+             padding: 28px 20px;
+             gap: 14px;
+             width: min(96vw, 450px);
+             max-width: 96vw;
+         }
+
+         /* Grille avatar : 3 colonnes (3×2 = 6 avatars visibles) */
+         .avatar-picker {
+             grid-template-columns: repeat(3, 56px);
+             grid-template-rows: repeat(2, 56px);
+         }
+     }
+
      @media (max-width: 980px), (max-height: 760px) {
          #step-choose {
              align-items: flex-start;
@@ -1008,127 +1032,4 @@ input[type=range]::-moz-range-track {
     background: #0f1a26;
     border: 1px solid #2e4060;
     border-radius: 3px;
-}
-/* =========================================================
-   RESPONSIVE DESIGN
-   ========================================================= */
-
-@media (max-width: 1024px) {
-    #game-layout {
-        flex-direction: column;
-        height: auto;
-        min-height: 100vh;
-        overflow-y: auto;
-        padding: 10px;
-    }
-
-    #left-pane {
-        width: 100%;
-        height: 50vh;
-        min-height: 400px;
-        flex: none;
-    }
-
-    #right-pane {
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        min-height: 50vh;
-        border-left: none;
-        border-top: 4px solid rgba(46,64,96,0.4);
-        padding: 20px;
-        flex: none;
-    }
-
-    #table {
-        width: 80%;
-        max-width: 350px;
-    }
-
-    .hero-title {
-        font-size: 4rem;
-    }
-
-    .hero-desc-box {
-        padding: 15px 20px;
-    }
-
-    .hero-desc-box p {
-        font-size: 1.4rem;
-    }
-
-    .lobby-wide-card {
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-        overflow-y: auto;
-        padding: 20px;
-    }
-
-    .lobby-panel {
-        width: 100%;
-        max-width: 400px;
-    }
-
-    .lobby-divider {
-        width: 80%;
-        height: 2px;
-        margin: 10px 0;
-    }
-}
-
-@media (max-width: 600px) {
-    .hero-title {
-        font-size: 3rem;
-    }
-
-    #table {
-        width: 90%;
-    }
-
-    .avatar {
-        width: 60px;
-        height: 60px;
-        font-size: 2rem;
-    }
-
-    .player {
-        width: 70px;
-    }
-
-    .player-name {
-        font-size: 0.9rem;
-        padding: 2px 8px;
-    }
-
-    #deck {
-        width: 80px;
-        height: 112px;
-    }
-
-    .card-text {
-        font-size: 1.5rem;
-    }
-
-    #timer-display {
-        font-size: 4rem;
-    }
-
-    .placeholder-text {
-        font-size: 1.5rem;
-    }
-    
-    #card-skin-menu {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        padding: 20px;
-    }
-    
-    .card-skin-option img {
-        width: 90px;
-        height: 126px;
-    }
-    
-    .card-skin-option span {
-        font-size: 1.1rem;
-    }
 }
