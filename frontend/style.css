@@ -590,19 +590,24 @@
 
         /* 3. Le Panneau Droit (Interface de Vote / Actions) */
         #right-pane {
-            flex: 1; /* Prend TOUT l'espace restant en bas */
+            flex: 1; /* Prend l'espace restant sous la table */
             width: 100%;
             max-width: 100%;
-            padding: 10px; /* On réduit énormément les marges internes */
+            padding: 20px 15px; /* On redonne un peu d'air aux éléments */
             border-left: none;
             border-top: 2px solid rgba(46,64,96,0.4);
-            overflow: hidden !important; /* INTERDICTION STRICTE DE SCROLLER */
-            justify-content: center;
-        }
 
+            /* 🔥 LE RETOUR DU SCROLL : On autorise le défilement vertical ici ! */
+            overflow-y: auto !important; 
+
+            /* On aligne le contenu en haut pour que le scroll se fasse naturellement vers le bas */
+            justify-content: flex-start; 
+        }
+        
         #right-pane::before {
-            inset: 5px; /* Le fond sombre se rapproche des bords pour gagner de l'espace */
-            border-radius: 16px;
+            /* On redonne au fond sombre sa forme normale sans trop l'écraser */
+            inset: 10px; 
+            border-radius: 20px;
         }
 
         /* 4. Compression agressive de tous les textes et espaces */
