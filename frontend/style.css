@@ -453,41 +453,81 @@
           background: rgba(46,64,96,0.7); border-radius: 2px;
       }
    
-     @media (max-width: 980px), (max-height: 760px) {
-         #step-choose {
+/* =========================================================
+       RESPONSIVE - Page Rejoindre/Créer (Entre 980px et 561px)
+       On garde les deux panneaux côte à côte, mais on compresse proprement
+       ========================================================= */
+       @media (max-width: 980px) {
+        .lobby-wide-card {
+            width: 96vw; /* On prend un peu plus de largeur d'écran */
+        }
+        .lobby-panel {
+            padding: 24px 20px; /* On réduit fortement les marges intérieures (étaient à 40px) */
+            gap: 12px;
+        }
+        .lobby-panel h2 { font-size: 1.6rem; }
+        .panel-icon { font-size: 2.5rem; }
+        .panel-desc { font-size: 1.05rem; }
+        
+        /* On rétrécit le champ du code PIN pour qu'il ne pousse pas les murs */
+        .code-input {
+            font-size: 2rem !important;
+            letter-spacing: 0.25em !important;
+            padding: 10px !important;
+        }
+        
+        .form-group label { font-size: 1rem; }
+        .form-group input, .form-group select {
+            font-size: 1.1rem;
+            padding: 8px 10px;
+        }
+        
+        /* On affine la ligne de séparation centrale */
+        .lobby-divider {
+            padding: 0 10px;
+            font-size: 1.2rem;
+        }
+    }
+
+    /* =========================================================
+       RESPONSIVE - Page Rejoindre/Créer (Max-width: 560px)
+       Là, l'écran est vraiment un smartphone, on passe l'un au-dessus de l'autre
+       ========================================================= */
+    @media (max-width: 560px), (max-height: 650px) {
+        #step-choose {
              align-items: flex-start;
              padding: 18px 0;
-         }
-         .lobby-wide-card {
-             flex-direction: column;
+        }
+        .lobby-wide-card {
+             flex-direction: column; /* Le fameux passage en colonne */
              gap: 14px;
-             width: min(640px, 94vw);
+             width: 94vw;
              max-height: calc(100vh - 36px);
              overflow-y: auto;
              padding-right: 4px;
-         }
-         .lobby-panel {
+        }
+        .lobby-panel {
              padding: 24px 22px;
-         }
-         .lobby-divider {
-             flex-direction: row;
+        }
+        .lobby-divider {
+             flex-direction: row; /* La séparation devient horizontale */
              padding: 0;
              gap: 12px;
-         }
-         .lobby-divider::before,
-         .lobby-divider::after {
+        }
+        .lobby-divider::before,
+        .lobby-divider::after {
              width: auto;
              height: 2px;
-         }
-         .create-options-grid {
+        }
+        .create-options-grid {
              grid-template-columns: 1fr;
              gap: 10px;
-         }
-         .code-input {
+        }
+        .code-input {
              font-size: 2.1rem !important;
-             letter-spacing: 0.35em;
-         }
-     }
+             letter-spacing: 0.35em !important;
+        }
+    }
       
       /* Boutons */
       .btn-primary, .btn-success {
