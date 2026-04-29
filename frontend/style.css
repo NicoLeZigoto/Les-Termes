@@ -573,142 +573,145 @@
         #deck { width: 60px; height: 84px; border-radius: 6px; }
         .pointer::after { font-size: 2.5rem; left: 35px; top: -15px; }
 
-        /* 🔥 LE PANNEAU DROIT (UI du bas) 🔥 */
-        #right-pane {
-            flex: 1; 
-            width: 100% !important;
-            max-width: 100vw !important;
-            padding: 25px 0 80px 0 !important; /* On retire le padding gauche/droite qui buggait */
-            border-left: none;
-            border-top: 2px solid rgba(46,64,96,0.4);
-            overflow-y: auto !important; 
-            overflow-x: hidden !important; /* Interdiction stricte de scroller sur le côté */
-            justify-content: flex-start !important; 
-            align-items: center !important; 
-        }
+/* 🔥 LE PANNEAU DROIT (UI du bas) 🔥 */
+#right-pane {
+    flex: 1; 
+    width: 100% !important;
+    max-width: 100vw !important;
+    
+    /* LE VRAI PADDING : 25px en haut, 20px sur les côtés, 80px en bas */
+    padding: 25px 20px 80px 20px !important; 
+    
+    /* LA RÈGLE MAGIQUE : Force le padding à rester à l'intérieur des 100% */
+    box-sizing: border-box !important; 
+    
+    border-left: none;
+    border-top: 2px solid rgba(46,64,96,0.4);
+    overflow-y: auto !important; 
+    overflow-x: hidden !important; 
+    justify-content: flex-start !important; 
+    align-items: center !important; 
+}
 
-        #right-pane::before {
-            inset: 0;
-            border-radius: 16px 16px 0 0; 
-        }
+#right-pane::before {
+    inset: 0;
+    border-radius: 16px 16px 0 0; 
+}
 
-        /* Disparition des éléments inutiles sur mobile */
-        #display-room-name, 
-        #room-badge,
-        #btn-volume-toggle,
-        #btn-back-menu { 
-            display: none !important; 
-        }
+/* Disparition des éléments inutiles sur mobile */
+#display-room-name, 
+#room-badge,
+#btn-volume-toggle,
+#btn-back-menu { 
+    display: none !important; 
+}
 
-        /* 🔒 LA SÉCURITÉ ABSOLUE ANTI-DÉBORDEMENT : 
-           On force les éléments à faire 90% de l'écran et à se centrer */
-        .role-toggle-container,
-        #waiting-area,
-        .card {
-            width: 90% !important;
-            max-width: 400px !important; /* Pas trop large sur tablette */
-            margin-left: auto !important;
-            margin-right: auto !important;
-            box-sizing: border-box !important;
-        }
+/* 🔒 LA SÉCURITÉ DES ENFANTS : 
+   Ils prennent 100% de la place dispo à l'intérieur du padding du parent */
+.role-toggle-container,
+#waiting-area,
+#start-controls,
+.card,
+.recap-text,
+.btn-success, 
+#btn-start-vote {
+    width: 100% !important;
+    max-width: 400px !important; /* Sécurité pour tablette */
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important; /* Empêche leurs propres bordures de déborder */
+}
 
-        /* 1. Bouton Spectateur */
-        .role-toggle-container { margin-bottom: 15px !important; }
-        .btn-role-toggle { 
-            padding: 10px 14px; 
-            font-size: 1rem; 
-            width: 100% !important; 
-            justify-content: center; 
-            box-sizing: border-box !important; 
-        }
-        
-        /* 2. Boîte "Prêt à en découdre" */
-        #start-controls { 
-            padding: 20px; gap: 10px; border-radius: 12px; 
-            width: 100% !important; 
-            margin: 0 !important; 
-            box-sizing: border-box !important;
-        }
-        #start-controls .btn-hero { 
-            font-size: 1.1rem !important; 
-            padding: 12px !important; 
-            width: 100% !important; 
-            box-sizing: border-box !important;
-        }
+/* 1. Bouton Spectateur */
+.role-toggle-container { margin-bottom: 15px !important; }
+.btn-role-toggle { 
+    padding: 10px 14px; 
+    font-size: 1rem; 
+    width: 100% !important; 
+    justify-content: center; 
+    box-sizing: border-box !important; 
+}
 
-        /* 3. La carte jouée */
-        .card { padding: 20px !important; margin-bottom: 20px !important; }
-        
-        #timer-display { font-size: 3.5rem; margin-top: 10px; text-align: center; }
-        
-        .recap-text { 
-            font-size: 1rem; padding: 12px; margin-top: 10px; 
-            width: 100% !important; margin-left: 0 !important; margin-right: 0 !important;
-            box-sizing: border-box !important; 
-        }
-        
-        /* 4. Boutons de vote */
-        .btn-success, #btn-start-vote { 
-            padding: 12px; font-size: 1.2rem; 
-            width: 100% !important; 
-            margin: 10px 0 0 0 !important; 
-            box-sizing: border-box !important;
-        }
+/* 2. Boîte "Prêt à en découdre" */
+#start-controls { 
+    padding: 20px; gap: 10px; border-radius: 12px; 
+}
+#start-controls .btn-hero { 
+    font-size: 1.1rem !important; 
+    padding: 12px !important; 
+    width: 100% !important; 
+    box-sizing: border-box !important;
+}
 
-        #spectators-container {
-            position: relative; top: 0; left: 0;
-            flex-direction: row; flex-wrap: wrap; justify-content: center;
-            margin-bottom: 15px; width: 90%; margin-left: auto; margin-right: auto;
-        }
+/* 3. La carte jouée */
+.card { padding: 20px !important; margin-bottom: 20px !important; }
 
-        /* --- MENU BURGER --- */
-        #mobile-burger-btn {
-            display: flex !important;
-            position: fixed;
-            top: 10px; left: 10px;
-            width: 45px; height: 45px;
-            background: #1a2a3a;
-            border: 2px solid #2e4060;
-            border-radius: 8px;
-            color: #e8ddd0;
-            font-size: 1.8rem;
-            align-items: center; justify-content: center;
-            z-index: 500; cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
+#timer-display { font-size: 3.5rem; margin-top: 10px; text-align: center; }
 
-        #mobile-menu-dropdown {
-            display: flex; flex-direction: column;
-            position: fixed;
-            top: 60px; left: 10px;
-            background: #131e2c;
-            border: 2px solid #2e4060; border-radius: 8px;
-            padding: 5px; gap: 5px;
-            z-index: 500;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.8);
-        }
+.recap-text { 
+    font-size: 1rem; padding: 12px; margin-top: 10px; 
+}
 
-        #mobile-menu-dropdown.hidden { display: none !important; }
+/* 4. Boutons de vote */
+.btn-success, #btn-start-vote { 
+    padding: 12px; font-size: 1.2rem; 
+    margin-top: 10px !important; 
+}
 
-        #mobile-menu-dropdown button {
-            background: #1a2a3a; border: none; color: #e8ddd0;
-            padding: 12px 20px; font-family: inherit; font-size: 1.1rem;
-            text-align: left; border-radius: 4px; cursor: pointer;
-        }
+#spectators-container {
+    position: relative; top: 0; left: 0;
+    flex-direction: row; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 15px; width: 100%;
+}
 
-        /* 🔥 BOUTON CIMETIÈRE FLOTTANT EN BAS À DROITE */
-        #cemetery-btn { 
-            top: auto !important;
-            bottom: 20px !important; 
-            right: 20px !important; 
-            font-size: 1.2rem; 
-            padding: 6px 12px; 
-            height: 45px;
-            position: fixed !important; 
-            z-index: 1000;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.8);
-        }
-    }
+/* --- MENU BURGER --- */
+#mobile-burger-btn {
+    display: flex !important;
+    position: fixed;
+    top: 10px; left: 10px;
+    width: 45px; height: 45px;
+    background: #1a2a3a;
+    border: 2px solid #2e4060;
+    border-radius: 8px;
+    color: #e8ddd0;
+    font-size: 1.8rem;
+    align-items: center; justify-content: center;
+    z-index: 500; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+#mobile-menu-dropdown {
+    display: flex; flex-direction: column;
+    position: fixed;
+    top: 60px; left: 10px;
+    background: #131e2c;
+    border: 2px solid #2e4060; border-radius: 8px;
+    padding: 5px; gap: 5px;
+    z-index: 500;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+}
+
+#mobile-menu-dropdown.hidden { display: none !important; }
+
+#mobile-menu-dropdown button {
+    background: #1a2a3a; border: none; color: #e8ddd0;
+    padding: 12px 20px; font-family: inherit; font-size: 1.1rem;
+    text-align: left; border-radius: 4px; cursor: pointer;
+}
+
+/* 🔥 BOUTON CIMETIÈRE FLOTTANT EN BAS À DROITE */
+#cemetery-btn { 
+    top: auto !important;
+    bottom: 20px !important; 
+    right: 20px !important; 
+    font-size: 1.2rem; 
+    padding: 6px 12px; 
+    height: 45px;
+    position: fixed !important; 
+    z-index: 1000;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.8);
+}
+}
       
       /* Boutons */
       .btn-primary, .btn-success {
