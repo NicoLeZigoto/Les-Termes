@@ -497,9 +497,9 @@
        ========================================================= */
        @media (max-width: 760px), (max-height: 650px) {
         
-        /* 1. On repasse en mode "block" classique pour annuler le rétrécissement de Flexbox */
+        /* 1. On repasse en mode "block" classique SANS FORCER par-dessus la classe .hidden */
         #step-choose {
-             display: block !important; 
+             display: block; /* 🔥 LA CORRECTION EST LÀ : on a retiré le !important */
              height: 100%; 
              padding: 30px 4vw; 
              overflow-y: auto; 
@@ -521,7 +521,7 @@
              padding: 30px 25px;
              flex: none; 
              width: 100% !important; 
-             max-width: none !important; /* MORT AU MAX-WIDTH 400px ! */
+             max-width: none !important; 
              box-sizing: border-box;
              box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
