@@ -553,6 +553,100 @@
              box-sizing: border-box;
         }
     }
+
+    /* =========================================================
+       RESPONSIVE MOBILE - JEU PRINCIPAL (Max-width: 760px)
+       ========================================================= */
+       @media (max-width: 760px), (max-height: 650px) {
+        
+        /* 1. On passe l'écran en mode vertical : Table en haut, UI en bas */
+        #game-layout {
+            flex-direction: column;
+            padding: 5px;
+            padding-top: 60px; /* On laisse la place pour les boutons du haut */
+            padding-bottom: 45px; /* On laisse la place pour le badge 'Room' en bas */
+            justify-content: flex-start;
+        }
+
+        /* 2. Le Panneau Gauche (La Table) */
+        #left-pane {
+            height: 42vh; /* La table prend environ 42% de la hauteur de l'écran */
+            min-height: 200px;
+            width: 100%;
+            flex: none; /* Empêche la table d'être écrasée par l'interface du bas */
+        }
+
+        #table {
+            height: 95%; /* S'adapte à la hauteur dispo */
+            width: auto; /* Se règle tout seul pour rester un cercle parfait */
+            max-width: 100vw;
+        }
+
+        /* On réduit la taille des éléments sur la table pour qu'ils rentrent */
+        .avatar { width: 50px; height: 50px; font-size: 1.8rem; padding-top: 4px; border-width: 2px; }
+        .player-name { font-size: 0.8rem; padding: 2px 6px; margin-top: 2px; }
+        #deck { width: 60px; height: 84px; border-radius: 6px; }
+        .pointer::after { font-size: 2.5rem; left: 35px; top: -15px; }
+
+        /* 3. Le Panneau Droit (Interface de Vote / Actions) */
+        #right-pane {
+            flex: 1; /* Prend TOUT l'espace restant en bas */
+            width: 100%;
+            max-width: 100%;
+            padding: 10px; /* On réduit énormément les marges internes */
+            border-left: none;
+            border-top: 2px solid rgba(46,64,96,0.4);
+            overflow: hidden !important; /* INTERDICTION STRICTE DE SCROLLER */
+            justify-content: center;
+        }
+
+        #right-pane::before {
+            inset: 5px; /* Le fond sombre se rapproche des bords pour gagner de l'espace */
+            border-radius: 16px;
+        }
+
+        /* 4. Compression agressive de tous les textes et espaces */
+        .room-neon-title { font-size: 1.8rem; margin: 0 0 5px; }
+        .role-toggle-container { margin-bottom: 5px; }
+        .btn-role-toggle { padding: 6px 14px; font-size: 0.95rem; }
+        .placeholder-text { font-size: 1.15rem; margin: 5px 0; }
+        
+        #start-controls { padding: 12px; gap: 8px; border-radius: 12px; }
+        #start-controls .btn-hero { font-size: 1.1rem !important; padding: 10px 20px !important; }
+
+        /* La carte jouée */
+        .card { padding: 12px 15px; max-width: 95%; margin: 0 auto; gap: 5px; }
+        .card-category { font-size: 1rem; }
+        .card-text { font-size: 1.15rem; margin: 5px 0; line-height: 1.1; }
+        
+        #timer-display { font-size: 3.5rem; margin-top: 5px; }
+        .recap-text { font-size: 1rem; padding: 10px; margin-top: 5px; }
+        .btn-success, #btn-start-vote { padding: 10px; font-size: 1.2rem; }
+
+        /* 5. On range intelligemment les Spectateurs */
+        #spectators-container {
+            position: relative; /* Ne flotte plus n'importe où */
+            top: 0; left: 0;
+            flex-direction: row; /* Aligné à l'horizontale */
+            flex-wrap: wrap; /* Passe à la ligne si trop nombreux */
+            justify-content: center;
+            margin-bottom: 8px;
+            gap: 6px;
+            width: 100%;
+        }
+        .spectator-badge { padding: 4px 8px; font-size: 0.85rem; }
+
+        /* 6. Boutons système en Overlay (Menu, Volume, Cimetière, Badge) */
+        #btn-back-menu, #btn-volume-toggle, #cemetery-btn, #room-badge {
+            font-size: 0.85rem;
+            padding: 6px 12px;
+        }
+        #btn-back-menu { top: 12px; left: 12px; }
+        /* Le bouton volume est poussé un peu à gauche pour laisser la place au cimetière */
+        #btn-volume-toggle { top: 12px; right: 100px; left: auto; } 
+        #cemetery-btn { top: 12px; right: 12px; }
+        #room-badge { bottom: 10px; left: 50%; transform: translateX(-50%); width: max-content; }
+    }
       
       /* Boutons */
       .btn-primary, .btn-success {
