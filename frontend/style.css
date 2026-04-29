@@ -1055,114 +1055,73 @@ input[type=range]::-moz-range-track {
         padding: 15px 30px;
     }
 
-    /* === PAGE IDENTITÉ (Pseudo / Avatar) === */
-    
-    /* 1. La carte devient flexible et on réduit ses bords intérieurs */
+/* === PAGE IDENTITÉ (Pseudo / Avatar) === */
+
+    /* 1. La carte devient flexible */
     .lobby-card.card {
-        width: 92vw; 
+        width: 92vw;
         max-width: 100%;
-        padding: 30px 20px; 
+        padding: 30px 20px;
     }
 
-    /* 2. On réduit un peu la taille des textes pour éviter les retours à la ligne moches */
-    .lobby-card h1 {
-        font-size: 2.6rem;
-    }
-    .subtitle {
-        font-size: 1.2rem;
-    }
+    /* 2. On réduit la taille des textes */
+    .lobby-card h1 { font-size: 2.6rem; }
+    .subtitle { font-size: 1.2rem; }
 
-    /* 3. Le conteneur global se centre */
+    /* 3. On centre parfaitement le bloc (grille + flèche) */
     .avatar-picker-shell {
         display: flex;
         align-items: center;
         justify-content: center;
         width: 100%;
-        gap: 10px;
-    }
-    
-    .avatar-picker {
-        /* Les 5 colonnes se partagent équitablement la largeur disponible */
-        grid-template-columns: repeat(5, 1fr); 
-        gap: 6px; /* On réduit l'espace mort entre les émojis */
-    }
-    
-    /* 4. On remplace la grille par un flexbox qui passe à la ligne automatiquement */
-    .avatar-picker {
-        display: grid;
-        /* Crée automatiquement des colonnes d'au moins 45px. 
-           Si la place manque, ça passe de 5 à 4 colonnes strictement ! */
-        grid-template-columns: repeat(auto-fit, minmax(45px, 1fr));
-        gap: 8px;
-        flex: 1; /* La grille prend toute la place à gauche de la flèche */
+        gap: 15px; /* Écart propre entre la grille et la flèche */
     }
 
-    /* 5. On réduit un peu le bouton "flèche" pour qu'il ne mange pas tout l'espace */
+    /* 4. On force STRICTEMENT 5 colonnes (pour la tranche 481px - 560px) */
+    .avatar-picker {
+        display: grid;
+        grid-template-columns: repeat(5, 45px); /* 5 colonnes fixes, plus de auto-fit capricieux ! */
+        justify-content: center; 
+        gap: 8px;
+        /* Le vilain flex: 1 a été supprimé ici ! */
+    }
+
+    /* 5. Taille fixe et centrage pour les emojis */
     .avatar-option {
         width: 100%;
         height: auto;
-        aspect-ratio: 1; 
+        aspect-ratio: 1;
         font-size: 1.8rem;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
     }
-/* 6. On garde le bouton flèche intact */
+
+    /* 6. On garde le bouton flèche intact */
     .avatar-nav-btn {
         width: 45px;
         height: 45px;
         font-size: 1.2rem;
         flex-shrink: 0;
     }
-}
-
-
-/* 3. Le conteneur se centre parfaitement */
-.avatar-picker-shell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    gap: 10px;
-}
-
-/* 4. Les boutons d'avatars gardent un aspect régulier */
-.avatar-option {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1; 
-    font-size: 1.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-}
-
-/* 5. Le bouton flèche réduit légèrement */
-.avatar-nav-btn {
-    width: 45px;
-    height: 45px;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
+} /* <-- CETTE ACCOLADE FERME LA MEDIA QUERY 560px */
 
 /* === NOUVELLES MEDIA QUERIES STRICTES POUR LA GRILLE === */
 
-/* En dessous de 480px : Le JS chargera 8 éléments, le CSS fait 4 colonnes */
+/* En dessous de 480px : Le JS charge 8 éléments, le CSS fait 4 colonnes strictes */
 @media (max-width: 480px) {
-.avatar-picker {
-    grid-template-columns: repeat(4, 50px);
-    grid-template-rows: auto;
-}
+    .avatar-picker {
+        grid-template-columns: repeat(4, 50px);
+    }
 }
 
-/* En dessous de 380px : Le JS chargera 6 éléments, le CSS fait 3 colonnes */
+/* En dessous de 380px : Le JS charge 6 éléments, le CSS fait 3 colonnes strictes */
 @media (max-width: 380px) {
-.avatar-picker {
-    grid-template-columns: repeat(3, 45px);
-}
-.avatar-option {
-    font-size: 1.5rem; /* On réduit un poil l'emoji */
-}
+    .avatar-picker {
+        grid-template-columns: repeat(3, 45px);
+    }
+    .avatar-option {
+        font-size: 1.5rem;
+    }
 }
