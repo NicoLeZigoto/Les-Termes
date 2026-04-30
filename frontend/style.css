@@ -1334,3 +1334,93 @@ input[type=range]::-moz-range-track {
         font-size: 1.5rem;
     }
 }
+
+/* =========================================================
+   CARROUSEL DE CARTES (Sélection)
+   ========================================================= */
+
+   .carousel-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    width: 100%;
+    max-width: 900px;
+}
+
+.carousel-btn {
+    display: none; /* Caché par défaut sur PC */
+    background: #1a2a3a;
+    border: 2px solid #2e4060;
+    color: #e8ddd0;
+    font-size: 2rem;
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.1s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    z-index: 10;
+    flex-shrink: 0;
+}
+.carousel-btn:hover { background: #d42b2b; border-color: #a81e1e; transform: scale(1.1); }
+.carousel-btn:active { transform: scale(0.95); }
+
+.carousel-indicators {
+    display: none; /* Caché par défaut sur PC */
+    justify-content: center;
+    gap: 12px;
+    margin-top: 25px;
+}
+.carousel-indicators .dot {
+    width: 14px;
+    height: 14px;
+    background: #2e4060;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+.carousel-indicators .dot.active {
+    background: #d42b2b;
+    box-shadow: 0 0 10px rgba(212,43,43,0.8);
+    transform: scale(1.2);
+}
+
+/* RESPONSIVE CARROUSEL (Mobile / Tablette) */
+@media (max-width: 850px) {
+    .carousel-btn, .carousel-indicators {
+        display: flex;
+    }
+    
+    #selection-container {
+        position: relative;
+        width: 220px;
+        height: 320px;
+        display: block; /* On retire le flex pour empiler les cartes */
+    }
+
+    .selectable-card {
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.8); /* Petit effet de recul pour les cartes cachées */
+        transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .selectable-card.carousel-active {
+        opacity: 1;
+        pointer-events: auto;
+        transform: scale(1);
+        z-index: 5;
+    }
+}
+
+/* Pour les tout petits écrans */
+@media (max-width: 560px) {
+    .carousel-wrapper { gap: 15px; }
+    .carousel-btn { width: 45px; height: 45px; font-size: 1.5rem; }
+}

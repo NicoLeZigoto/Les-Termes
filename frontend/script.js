@@ -195,7 +195,7 @@ function createRoom() {
     const pseudo = document.getElementById('input-pseudo').value.trim();
     if (!pseudo) return showNotification("Pseudo obligatoire !");
 
-    const roomName = document.getElementById('input-room-name').value.trim() || "La Room";
+    const roomName = document.getElementById('input-room-name').value.trim() || "";
     const rawPoints = parseInt(document.getElementById('input-points').value);
     const scoreToWin = isNaN(rawPoints) ? 5 : Math.min(15, Math.max(2, rawPoints));
     document.getElementById('input-points').value = scoreToWin;
@@ -456,17 +456,22 @@ function showOthersWaitingForDraw() {
 
 // ─── Overlay de sélection de carte (lecteur uniquement) ───
 
+let currentCardSelectionIndex = 0; 
+
 function showCardSelection(threeChoices) {
     const overlay = document.getElementById('card-selection-overlay');
     const container = document.getElementById('selection-container');
     const title = document.getElementById('selection-title');
     container.innerHTML = '';
+    
+    currentCardSelectionIndex = 0;
+    updateCarouselIndicators();
 
     title.innerText = "À toi de choisir la pire carte...";
 
     threeChoices.forEach((card, index) => {
         const cardDiv = document.createElement('div');
-        cardDiv.className = 'selectable-card is-reader-choice is-revealed';
+        cardDiv.className = `selectable-card is-reader-choice is-revealed ${index === 0 ? 'carousel-active' : ''}`;
         cardDiv.innerHTML = `
             <div class="card-flipper">
                 <div class="card-front"></div>
@@ -481,6 +486,46 @@ function showCardSelection(threeChoices) {
     });
 
     overlay.classList.remove('hidden');
+}
+
+// Naviguer via les flèches Gauche (-1) ou Droite (+1)
+function moveCardCarousel(direction) {
+    const cards = document.querySelectorAll('#selection-container .selectable-card');
+    if (!cards.length) return;
+    
+    if (typeof audioManager !== 'undefined') audioManager.playSound('ui-click');
+    
+    cards[currentCardSelectionIndex].classList.remove('carousel-active');
+    currentCardSelectionIndex = (currentCardSelectionIndex + direction + cards.length) % cards.length;
+    cards[currentCardSelectionIndex].classList.add('carousel-active');
+    
+    updateCarouselIndicators();
+}
+
+// Naviguer via les petits points (Dots)
+function setCardCarousel(index) {
+    const cards = document.querySelectorAll('#selection-container .selectable-card');
+    if (!cards.length || index === currentCardSelectionIndex) return;
+    
+    if (typeof audioManager !== 'undefined') audioManager.playSound('ui-click');
+
+    cards[currentCardSelectionIndex].classList.remove('carousel-active');
+    currentCardSelectionIndex = index;
+    cards[currentCardSelectionIndex].classList.add('carousel-active');
+    
+    updateCarouselIndicators();
+}
+
+// Met à jour la surbrillance des petits points
+function updateCarouselIndicators() {
+    const dots = document.querySelectorAll('#carousel-indicators .dot');
+    dots.forEach((dot, index) => {
+        if (index === currentCardSelectionIndex) {
+            dot.classList.add('active');
+        } else {
+            dot.classList.remove('active');
+        }
+    });
 }
 
 function revealChosenCard(chosenCard, chosenIndex) {
@@ -2221,7 +2266,7 @@ socket.on('execute_poke', (data) => {
 
 function sendPoke() {
     audioManager.playSound('ui-click');
-    // On cache immédiatement tous les boutons pour éviter le spam
+    
     document.querySelectorAll('.btn-poke').forEach(btn => btn.classList.add('hidden'));
     socket.emit('trigger_poke', currentRoomCode);
 }
@@ -2233,34 +2278,33 @@ async function playPokeAnimation(senderId, targetId) {
 
     const table = document.getElementById('table');
 
-    // 1. Création du doigt
+    
     const finger = document.createElement('div');
     finger.innerText = '👉';
     finger.className = 'poke-finger';
-    // Position de départ (l'envoyeur)
+    
     finger.style.left = `${sender.centerX - 15}px`;
     finger.style.top = `${sender.centerY - 15}px`;
     table.appendChild(finger);
 
-    // Délai vital pour que le navigateur comprenne la position de départ
+    
     await sleep(50);
 
-    // 2. Déplacement vers la cible (le lecteur)
+    
     finger.style.left = `${target.centerX - 15}px`;
     finger.style.top = `${target.centerY - 15}px`;
 
-    // On attend la durée de la transition CSS (400ms)
+    
     await sleep(400);
 
-    // 3. Impact
-    audioManager.playSound('ui-click'); // Tu pourras changer par un son 'boing' plus tard si tu veux
+
+    audioManager.playSound('ui-click'); 
     const targetAvatar = document.getElementById(`avatar-${targetId}`);
     if (targetAvatar) {
         targetAvatar.classList.add('avatar-squash');
         setTimeout(() => targetAvatar.classList.remove('avatar-squash'), 300);
     }
 
-    // 4. Nettoyage
     finger.style.opacity = '0';
     await sleep(200);
     finger.remove();
@@ -2275,7 +2319,6 @@ function toggleMobileMenu() {
     document.getElementById('mobile-menu-dropdown').classList.toggle('hidden');
 }
 
-// Ferme le menu si on clique n'importe où ailleurs sur l'écran
 document.addEventListener('click', (e) => {
     const btn = document.getElementById('mobile-burger-btn');
     const dropdown = document.getElementById('mobile-menu-dropdown');

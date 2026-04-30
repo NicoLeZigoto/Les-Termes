@@ -184,7 +184,18 @@
 
     <div id="card-selection-overlay" class="hidden">
         <div id="selection-title" class="tie-subtitle"></div>
-        <div id="selection-container"></div>
+        
+        <div class="carousel-wrapper">
+            <button id="nav-card-left" class="carousel-btn" onclick="moveCardCarousel(-1)">❮</button>
+            <div id="selection-container"></div>
+            <button id="nav-card-right" class="carousel-btn" onclick="moveCardCarousel(1)">❯</button>
+        </div>
+        
+        <div id="carousel-indicators" class="carousel-indicators">
+            <span class="dot active" onclick="setCardCarousel(0)"></span>
+            <span class="dot" onclick="setCardCarousel(1)"></span>
+            <span class="dot" onclick="setCardCarousel(2)"></span>
+        </div>
     </div>
 
     <div id="tie-overlay" class="hidden">
